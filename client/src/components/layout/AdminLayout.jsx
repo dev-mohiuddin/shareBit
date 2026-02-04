@@ -1,12 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 const navItems = [
-  { label: "Analytics", to: "/admin" },
-  { label: "Assets", to: "/admin?tab=assets" },
-  { label: "Share Assignment", to: "/admin?tab=shares" },
-  { label: "Withdrawals", to: "/admin?tab=withdrawals" },
-  { label: "Audit Logs", to: "/admin?tab=audit" },
-  { label: "Users", to: "/admin?tab=users" },
+  { label: "Dashboard", to: "/admin" },
+  { label: "Asset Manager", to: "/admin/assets" },
+  { label: "Share Management", to: "/admin/shares" },
+  { label: "Profit Management", to: "/admin/profit" },
+  { label: "Withdrawals", to: "/admin/withdrawals" },
+  { label: "Audit Logs", to: "/admin/audit" },
 ];
 
 export const AdminLayout = () => {
@@ -14,7 +14,7 @@ export const AdminLayout = () => {
     <div className="min-h-screen bg-background">
       <div className="flex">
         <aside className="hidden w-64 border-r border-border bg-card p-6 lg:block">
-          <div className="text-xl font-semibold">ShareBit Admin</div>
+          <div className="text-xl font-semibold">AssetNode Admin</div>
           <nav className="mt-6 space-y-2">
             {navItems.map((item) => (
               <NavLink

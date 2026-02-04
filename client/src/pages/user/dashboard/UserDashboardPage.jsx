@@ -2,16 +2,17 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   CreditCard,
-  Home,
   PieChart,
   ShieldCheck,
-  Wallet,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useGetWalletQuery, useGetAssetsQuery, useGetMyShareAccountsQuery } from "@/features/api/apiSlice";
+import { Link } from "react-router-dom";
 
 const profitData = [
   { month: "Jan", value: 420 },
@@ -33,9 +34,11 @@ export const UserDashboardPage = () => {
   const activeShares = shareAccounts.filter((share) => share.status === "active").length;
   const totalShares = shareAccounts.length;
   const progress = totalShares ? Math.round((activeShares / totalShares) * 100) : 0;
+  
+  const totalInvested = shareAccounts.reduce((sum, share) => sum + (share.paidAmount || 0), 0);
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white">
           <CardHeader>
@@ -46,11 +49,11 @@ export const UserDashboardPage = () => {
               {walletLoading ? "Loading..." : `$${walletBalance}`}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="secondary" className="w-full">
-                Withdraw
+              <Button variant="secondary" className="w-full" asChild>
+                <Link to="/withdrawals">Withdraw</Link>
               </Button>
-              <Button variant="outline" className="w-full text-white border-white/30">
-                Deposit
+              <Button variant="outline" className="w-full text-white border-white/30" asChild>
+                <Link to="/wallet">Deposit</Link>
               </Button>
             </div>
           </CardContent>
@@ -59,9 +62,9 @@ export const UserDashboardPage = () => {
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          { label: "Total Profit", value: "$1,120", icon: <BarChart3 className="h-4 w-4" /> },
+          { label: "Total Invested", value: `$${totalInvested}`, icon: <DollarSign className="h-4 w-4" /> },
+          { label: "Total Profit", value: "$1,120", icon: <TrendingUp className="h-4 w-4" /> },
           { label: "Active Shares", value: activeShares, icon: <PieChart className="h-4 w-4" /> },
-          { label: "Security Status", value: "Verified", icon: <ShieldCheck className="h-4 w-4" /> },
         ].map((item) => (
           <Card key={item.label}>
             <CardHeader>
@@ -81,21 +84,21 @@ export const UserDashboardPage = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Paid Shares</span>
-            <span className="font-medium">{activeShares}/{totalShares}</span>
+            <span className="text-muted-foreground">Active Investments</span>
+            <span className="font-medium">{activeShares}/{totalShares} Shares</span>
           </div>
           <Progress value={progress} />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{progress}% completed</span>
+            <span>{progress}% portfolio active</span>
             <span>Next payout in 24 hours</span>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={profitData}>
-                <XAxis dataKey="month" />
-                <YAxis />
+                <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
                 <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} />
+                <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -104,7 +107,7 @@ export const UserDashboardPage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Top Assets</CardTitle>
+          <CardTitle>Active Assets Summary</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {assets.slice(0, 3).map((asset) => (
@@ -115,33 +118,14 @@ export const UserDashboardPage = () => {
                   {asset.category || "Asset"} • ${asset.sharePrice} per share
                 </div>
               </div>
-              <Button size="sm">Invest</Button>
+              <Button size="sm" asChild>
+                 <Link to="/marketplace">Invest</Link>
+              </Button>
             </div>
           ))}
           {assets.length === 0 && <div className="text-sm text-muted-foreground">No assets available.</div>}
         </CardContent>
       </Card>
-
-      <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 px-6 py-3 backdrop-blur md:hidden">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <button className="flex flex-col items-center gap-1 text-primary">
-            <Home className="h-5 w-5" />
-            Home
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <PieChart className="h-5 w-5" />
-            Assets
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <Wallet className="h-5 w-5" />
-            Wallet
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <CreditCard className="h-5 w-5" />
-            Profile
-          </button>
-        </div>
-      </nav>
     </div>
   );
 };

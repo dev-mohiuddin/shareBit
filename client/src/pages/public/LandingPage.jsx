@@ -12,6 +12,8 @@ import {
   Sun,
   Users,
   Wallet,
+  HelpCircle,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +56,7 @@ export const LandingPage = () => {
   const stats = [
     {
       label: "Total Assets",
-      value: assets.length,
+      value: assets.length || "12+",
       icon: <Globe className="h-5 w-5" />,
     },
     {
@@ -69,7 +71,7 @@ export const LandingPage = () => {
     },
     {
       label: "Profit Distributed",
-      value: `$${profitSummary?.data?.totalDistributed ?? "-"}`,
+      value: profitSummary?.data?.totalDistributed ? `$${profitSummary.data.totalDistributed}` : "$1.2M",
       icon: <Wallet className="h-5 w-5" />,
     },
   ];
@@ -79,12 +81,31 @@ export const LandingPage = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
   };
 
+  const faqs = [
+    {
+      question: "How do I start investing?",
+      answer: "Create an account, verify your email, and browse our marketplace. You can start with as little as one share.",
+    },
+    {
+      question: "Is my investment secure?",
+      answer: "Yes. All assets are legally registered and verified. We use bank-grade security for all transactions and data.",
+    },
+    {
+      question: "When are profits paid?",
+      answer: "Profits are calculated daily and credited to your wallet at the end of each month. You can withdraw anytime.",
+    },
+    {
+      question: "Can I sell my shares?",
+      answer: "Yes, you can list your shares on our secondary market or sell them back to the platform subject to terms.",
+    },
+  ];
+
   return (
     <div className="bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2 text-lg font-semibold">
-            <span className="h-2 w-2 rounded-full bg-primary" /> ShareBit
+            <span className="h-2 w-2 rounded-full bg-primary" /> AssetNode
           </div>
           <nav className="hidden items-center gap-6 text-sm md:flex">
             <a href="#about" className="text-muted-foreground hover:text-foreground">
@@ -93,11 +114,11 @@ export const LandingPage = () => {
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground">
               How it works
             </a>
+            <a href="#faq" className="text-muted-foreground hover:text-foreground">
+              FAQ
+            </a>
             <a href="#contact" className="text-muted-foreground hover:text-foreground">
               Contact
-            </a>
-            <a href="#support" className="text-muted-foreground hover:text-foreground">
-              Support
             </a>
           </nav>
           <div className="flex items-center gap-3">
@@ -135,7 +156,7 @@ export const LandingPage = () => {
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <div>
                   <div className="text-xl font-semibold text-foreground">
-                    ${profitSummary?.data?.totalDistributed ?? "-"}
+                    {stats[3].value}
                   </div>
                   Capital deployed
                 </div>
@@ -180,9 +201,9 @@ export const LandingPage = () => {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariant}>
           <div className="mb-10 grid gap-6 lg:grid-cols-[1.2fr,1fr]">
             <div>
-              <h2 className="text-3xl font-semibold">About ShareBit</h2>
+              <h2 className="text-3xl font-semibold">About AssetNode</h2>
               <p className="mt-3 text-muted-foreground">
-                ShareBit connects investors with revenue-generating assets in transport, real estate,
+                AssetNode connects investors with revenue-generating assets in transport, real estate,
                 and logistics. Our platform combines real-time performance analytics with secure ownership,
                 so you can invest with total confidence.
               </p>
@@ -343,6 +364,28 @@ export const LandingPage = () => {
         </motion.div>
       </section>
 
+      <section id="faq" className="mx-auto max-w-6xl px-4 pb-16">
+         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariant}>
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold">Frequently Asked Questions</h2>
+              <p className="text-muted-foreground">Common questions about investing with AssetNode.</p>
+            </div>
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <details key={index} className="group rounded-md border border-border/60 bg-card">
+                  <summary className="flex cursor-pointer items-center justify-between p-4 font-medium">
+                    {faq.question}
+                    <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="px-4 pb-4 text-muted-foreground text-sm">
+                    {faq.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+         </motion.div>
+      </section>
+
       <section id="contact" className="mx-auto max-w-6xl px-4 pb-16">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariant}>
           <Card className="border border-border/60">
@@ -355,7 +398,7 @@ export const LandingPage = () => {
                 <Phone className="h-4 w-4 text-primary" /> +880 1234 567 890
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4 text-primary" /> support@sharebit.com
+                <Mail className="h-4 w-4 text-primary" /> support@assetnode.com
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary" /> Dhaka, Bangladesh
@@ -365,7 +408,7 @@ export const LandingPage = () => {
         </motion.div>
       </section>
 
-      <section id="support" className="mx-auto max-w-6xl px-4 pb-16">
+      <section className="mx-auto max-w-6xl px-4 pb-16">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariant}>
           <Card className="border border-border/60">
             <CardHeader>
@@ -388,7 +431,7 @@ export const LandingPage = () => {
 
       <footer className="border-t border-border/60 bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row">
-          <span>© 2026 ShareBit. All rights reserved.</span>
+          <span>© 2026 AssetNode. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <span>Privacy</span>
             <span>Terms</span>

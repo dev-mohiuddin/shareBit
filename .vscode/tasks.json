@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "list_structure",
+			"type": "shell",
+			"command": "ls server/src/models client/src/pages/public client/src/pages/auth client/src/pages/user client/src/pages/admin",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "analysis"
+		}
+	]
+}

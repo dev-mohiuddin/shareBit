@@ -4,7 +4,17 @@ const ROUTES = {
   REGISTER: "/register",
   VERIFY_OTP: "/verify-otp",
   DASHBOARD: "/dashboard",
+  MARKETPLACE: "/marketplace",
+  INVESTMENTS: "/investments",
+  WALLET: "/wallet",
+  WITHDRAWALS: "/withdrawals",
+  PROFILE: "/profile",
   ADMIN: "/admin",
+  ADMIN_ASSETS: "/admin/assets",
+  ADMIN_SHARES: "/admin/shares",
+  ADMIN_PROFIT: "/admin/profit",
+  ADMIN_WITHDRAWALS: "/admin/withdrawals",
+  ADMIN_AUDIT: "/admin/audit",
   UNAUTHORIZED: "/unauthorized",
 };
 

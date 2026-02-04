@@ -40,7 +40,7 @@ export const RegisterPage = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>Create your ShareBit account</CardTitle>
+          <CardTitle>Create your AssetNode account</CardTitle>
           <CardDescription>Get started with just your name, email, and password</CardDescription>
         </CardHeader>
         <CardContent>

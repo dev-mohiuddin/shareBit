@@ -33,7 +33,7 @@ export const LoginPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Access your ShareBit portfolio</CardDescription>
+          <CardDescription>Access your AssetNode portfolio</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
