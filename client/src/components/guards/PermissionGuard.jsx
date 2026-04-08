@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { getRoleNames, isAdminRole, isInvestorRole, normalizeRole } from "@/lib/roleUtils";
 
 const hasPermission = (permissions, permission) => {
   if (!permission) return true;
@@ -15,14 +16,34 @@ const hasPermission = (permissions, permission) => {
   );
 };
 
-const hasPanelAccess = (primaryRole, roleNames = [], panel) => {
+const hasAnyRole = (roles, targets) =>
+  targets.some((target) => roles.includes(target));
+
+const hasPanelAccess = (primaryRole, roleNames = [], panel, permissions = []) => {
   if (!panel) return true;
-  const roles = [primaryRole, ...roleNames]
-    .filter(Boolean)
-    .map((r) => String(r).toLowerCase());
-  if (panel === "investor") return true; 
-  if (panel === "super-admin") return roles.includes("superadmin") || roles.includes("super-admin");
-  if (panel === "admin") return roles.includes("admin") || roles.includes("superadmin") || roles.includes("super-admin");
+  const roles = getRoleNames({ roleName: primaryRole, roleNames });
+  const hasWildcard = permissions.includes("*");
+
+  if (panel === "investor") {
+    return (
+      isInvestorRole(roles) ||
+      hasWildcard ||
+      permissions.some((permission) => permission.startsWith("investor."))
+    );
+  }
+
+  if (panel === "super-admin") {
+    return hasAnyRole(roles, ["superadmin"]) || hasWildcard;
+  }
+
+  if (panel === "admin") {
+    return (
+      isAdminRole(roles) ||
+      hasWildcard ||
+      permissions.some((permission) => permission.startsWith("platform."))
+    );
+  }
+
   return false;
 };
 
@@ -44,21 +65,20 @@ export const PermissionGuard = ({
   }
 
   const permissions = user.permissions || [];
-  const roleNames = [user.roleName, ...(user.roleNames || [])]
-    .filter(Boolean)
-    .map((role) => String(role));
+  const roleNames = [user.roleName, ...(user.roleNames || [])].filter(Boolean);
 
   let isAuthorized = true;
 
-  if (requiredPanel && !hasPanelAccess(user.roleName || user.role, roleNames, requiredPanel)) {
+  if (
+    requiredPanel &&
+    !hasPanelAccess(user.roleName || user.role, roleNames, requiredPanel, permissions)
+  ) {
     isAuthorized = false;
   }
 
   if (allowedRoles.length > 0) {
-    const allowed = allowedRoles.map((role) => String(role).toLowerCase());
-    const roles = [user.roleName, user.role, ...roleNames]
-      .filter(Boolean)
-      .map((role) => String(role).toLowerCase());
+    const allowed = allowedRoles.map((role) => normalizeRole(role));
+    const roles = getRoleNames(user);
     const matches = roles.some((role) => allowed.includes(role));
     if (!matches && !permissions.includes("*")) {
       isAuthorized = false;

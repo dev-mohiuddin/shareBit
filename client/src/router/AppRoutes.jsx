@@ -52,7 +52,7 @@ export const AppRoutes = () => {
     },
     {
       element: (
-        <PermissionGuard requiredPanel="super-admin">
+        <PermissionGuard requiredPanel="admin">
           <AdminLayout />
         </PermissionGuard>
       ),

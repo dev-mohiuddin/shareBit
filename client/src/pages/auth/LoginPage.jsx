@@ -6,11 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
+import { getRoleNames, isAdminRole } from "@/lib/roleUtils";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
+
+const getRedirectPath = (user) => {
+  const roles = getRoleNames(user);
+  if (isAdminRole(roles)) {
+    return "/admin";
+  }
+  return "/dashboard";
+};
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -21,7 +30,7 @@ export const LoginPage = () => {
     try {
       const response = await login(data).unwrap();
       if (response?.success) {
-        navigate("/dashboard");
+        navigate(getRedirectPath(response?.data), { replace: true });
       }
     } catch (_) {
       // handled by UI error state
@@ -41,7 +50,7 @@ export const LoginPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Access your AssetNode portfolio</CardDescription>
+          <CardDescription>Access your ShareBit dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
