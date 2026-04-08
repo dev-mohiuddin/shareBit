@@ -6,8 +6,12 @@ import {
   requestWithdrawalController,
   listWithdrawalsController,
   listAllWithdrawalsController,
+  updateWithdrawalStatusController,
 } from "#controllers/wallet/walletController.js";
-import { requestWithdrawalSchema } from "#validations/wallet/walletValidation.js";
+import {
+  requestWithdrawalSchema,
+  updateWithdrawalStatusSchema,
+} from "#validations/wallet/walletValidation.js";
 
 export const walletRouter = express.Router();
 
@@ -24,4 +28,12 @@ walletRouter.post(
   protect,
   validate(requestWithdrawalSchema),
   requestWithdrawalController
+);
+
+walletRouter.patch(
+  "/wallet/withdrawals/:withdrawalId/status",
+  protect,
+  authorize("platform.wallet:manage"),
+  validate(updateWithdrawalStatusSchema),
+  updateWithdrawalStatusController
 );

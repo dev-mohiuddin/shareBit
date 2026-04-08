@@ -1,5 +1,13 @@
 import { findWalletByUserId, createWallet } from "#repositories/walletRepository.js";
-import { createWithdrawalRequest, getWithdrawalRequestsByUser, getAllWithdrawalRequests } from "#repositories/withdrawalRequestRepository.js";
+import {
+  createWithdrawalRequest,
+  getWithdrawalRequestsByUser,
+  getAllWithdrawalRequests,
+  getWithdrawalRequestById,
+  updateWithdrawalRequestById,
+} from "#repositories/withdrawalRequestRepository.js";
+import { updateWalletBalance } from "#repositories/walletRepository.js";
+import { createTransaction } from "#repositories/transactionRepository.js";
 import { throwError } from "#utils/throwErrorUtil.js";
 import { logAudit } from "#utils/auditLogger.js";
 
@@ -42,4 +50,78 @@ export const listWithdrawals = async (userId) => {
 
 export const listAllWithdrawals = async () => {
   return getAllWithdrawalRequests();
+};
+
+export const updateWithdrawalStatus = async (withdrawalId, payload, actor) => {
+  const request = await getWithdrawalRequestById(withdrawalId);
+  if (!request) throwError("Withdrawal request not found", 404);
+
+  if (request.status === payload.status) {
+    return request;
+  }
+
+  if (payload.status === "approved") {
+    if (request.status !== "requested") {
+      throwError("Only requested withdrawals can be approved", 400);
+    }
+  }
+
+  if (payload.status === "rejected") {
+    if (request.status !== "requested") {
+      throwError("Only requested withdrawals can be rejected", 400);
+    }
+  }
+
+  if (payload.status === "paid") {
+    if (request.status !== "approved") {
+      throwError("Only approved withdrawals can be marked as paid", 400);
+    }
+
+    const wallet = await findWalletByUserId(request.userId);
+    if (!wallet) throwError("Wallet not found", 404);
+    if (wallet.balance < request.amount) {
+      throwError("Insufficient wallet balance to mark withdrawal as paid", 400);
+    }
+
+    await updateWalletBalance(wallet._id, {
+      $inc: { balance: -Math.abs(request.amount) },
+      lastTransactionAt: new Date(),
+    });
+
+    await createTransaction({
+      walletId: wallet._id,
+      userId: request.userId,
+      amount: -Math.abs(request.amount),
+      currency: request.currency,
+      type: "withdrawal",
+      referenceType: "WithdrawalRequest",
+      referenceId: request._id,
+      createdBy: actor.id || actor._id,
+      metadata: payload.reason ? { reason: payload.reason } : {},
+    });
+  }
+
+  const metadata = {
+    ...(request.metadata || {}),
+    reviewedBy: actor.id || actor._id,
+    reviewedAt: new Date(),
+    ...(payload.reason ? { reason: payload.reason } : {}),
+  };
+
+  const updated = await updateWithdrawalRequestById(withdrawalId, {
+    status: payload.status,
+    metadata,
+  });
+
+  await logAudit({
+    actorId: actor.id || actor._id,
+    actorRole: actor.roleName,
+    action: `wallet.withdrawal.${payload.status}`,
+    entity: "WithdrawalRequest",
+    entityId: updated._id,
+    before: request.toObject(),
+    after: updated.toObject(),
+  });
+
+  return updated;
 };

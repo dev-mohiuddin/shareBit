@@ -9,6 +9,13 @@ export const initPlatformRoles = async () => {
         if (!existingRole) {
           await PlatformRole.create(roleData);
           console.log(`Platform Role created: ${roleData.name}`);
+          return;
+        }
+
+        if (roleData.isDefault && !existingRole.isDefault) {
+          existingRole.isDefault = true;
+          await existingRole.save();
+          console.log(`Platform Role updated as default: ${roleData.name}`);
         }
       })
     );

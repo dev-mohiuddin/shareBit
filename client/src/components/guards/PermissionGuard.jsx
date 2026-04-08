@@ -15,9 +15,11 @@ const hasPermission = (permissions, permission) => {
   );
 };
 
-const hasPanelAccess = (role, roleNames = [], panel) => {
+const hasPanelAccess = (primaryRole, roleNames = [], panel) => {
   if (!panel) return true;
-  const roles = [role, ...roleNames].filter(Boolean).map((r) => String(r).toLowerCase());
+  const roles = [primaryRole, ...roleNames]
+    .filter(Boolean)
+    .map((r) => String(r).toLowerCase());
   if (panel === "investor") return true; 
   if (panel === "super-admin") return roles.includes("superadmin") || roles.includes("super-admin");
   if (panel === "admin") return roles.includes("admin") || roles.includes("superadmin") || roles.includes("super-admin");
@@ -42,17 +44,22 @@ export const PermissionGuard = ({
   }
 
   const permissions = user.permissions || [];
-  const roleNames = user.roleNames || [];
+  const roleNames = [user.roleName, ...(user.roleNames || [])]
+    .filter(Boolean)
+    .map((role) => String(role));
 
   let isAuthorized = true;
 
-  if (requiredPanel && !hasPanelAccess(user.role, roleNames, requiredPanel)) {
+  if (requiredPanel && !hasPanelAccess(user.roleName || user.role, roleNames, requiredPanel)) {
     isAuthorized = false;
   }
 
   if (allowedRoles.length > 0) {
-    const roles = [user.role, ...roleNames].filter(Boolean);
-    const matches = roles.some((role) => allowedRoles.includes(String(role)));
+    const allowed = allowedRoles.map((role) => String(role).toLowerCase());
+    const roles = [user.roleName, user.role, ...roleNames]
+      .filter(Boolean)
+      .map((role) => String(role).toLowerCase());
+    const matches = roles.some((role) => allowed.includes(role));
     if (!matches && !permissions.includes("*")) {
       isAuthorized = false;
     }

@@ -1,13 +1,12 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
-import { 
-    useGetAssetsQuery, 
+import { DollarSign, TrendingUp, AlertCircle } from "lucide-react";
+import {
+    useGetAssetsQuery,
     useCreateAssetProfitMutation,
-    useGetProfitSummaryQuery 
+    useGetProfitSummaryQuery,
 } from "@/features/api/apiSlice";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { useToast } from "@/components/ui/use-toast";
 const profitSchema = z.object({
   assetId: z.string().min(1, "Please select an asset"),
   monthKey: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
-  totalProfitAmount: z.preprocess(
+    amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
     z.number().positive("Profit amount must be positive")
   ),
@@ -31,8 +30,8 @@ const profitSchema = z.object({
 export const ProfitManagerPage = () => {
     const { toast } = useToast();
     const [createAssetProfit, { isLoading: isCreating }] = useCreateAssetProfitMutation();
-    const { data: assetsData } = useGetAssetsQuery({ page: 1, limit: 100 });
-    const assets = assetsData?.data?.results || [];
+    const { data: assetsData } = useGetAssetsQuery();
+    const assets = assetsData?.data || [];
 
     // Default to current month
     const defaultMonth = format(new Date(), "yyyy-MM");
@@ -45,7 +44,7 @@ export const ProfitManagerPage = () => {
         defaultValues: {
             assetId: "",
             monthKey: defaultMonth,
-            totalProfitAmount: "",
+            amount: "",
         },
     });
 
@@ -58,8 +57,8 @@ export const ProfitManagerPage = () => {
             });
             form.reset({
                 assetId: "",
-                monthKey: defaultMonth, 
-                totalProfitAmount: ""
+                monthKey: defaultMonth,
+                amount: "",
             });
         } catch (error) {
             toast({
@@ -100,7 +99,7 @@ export const ProfitManagerPage = () => {
                                             </FormControl>
                                             <SelectContent>
                                                 {assets.map((asset) => (
-                                                    <SelectItem key={asset.id} value={asset.id}>
+                                                    <SelectItem key={asset._id} value={asset._id}>
                                                         {asset.name}
                                                     </SelectItem>
                                                 ))}
@@ -127,7 +126,7 @@ export const ProfitManagerPage = () => {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="totalProfitAmount"
+                                    name="amount"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Total Profit ($)</FormLabel>
@@ -172,38 +171,36 @@ export const ProfitManagerPage = () => {
                 <CardContent>
                     {isLoadingSummary ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">Loading summary...</div>
-                    ) : summaryData?.data?.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">No profit records found for this month.</div>
                     ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Asset</TableHead>
+                                    <TableHead>Metric</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
-                                    <TableHead className="text-right">Yield</TableHead>
+                                    <TableHead className="text-right">Month</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {/* This assumes summaryData returns an array of profit entries. 
-                                    Adjust based on actual API response structure. */}
-                                {summaryData && summaryData.data && Array.isArray(summaryData.data) ? 
-                                    summaryData.data.map((item, idx) => (
-                                    <TableRow key={idx}>
-                                        <TableCell className="font-medium">{item.assetName || "Unknown Asset"}</TableCell>
-                                        <TableCell className="text-right font-medium text-green-600">
-                                            +${item.amount?.toLocaleString()}
-                                        </TableCell>
-                                        <TableCell className="text-right text-muted-foreground text-xs">
-                                            {item.auditYield || "0"}%
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                         <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                                            No data available
-                                         </TableCell>
-                                    </TableRow>
-                                )}
+                                <TableRow>
+                                    <TableCell className="font-medium">Total Input</TableCell>
+                                    <TableCell className="text-right font-medium">${summaryData?.data?.totalInput || 0}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs">{summaryData?.data?.monthKey || defaultMonth}</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="font-medium">Total Distributed</TableCell>
+                                    <TableCell className="text-right font-medium">${summaryData?.data?.totalDistributed || 0}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs">{summaryData?.data?.monthKey || defaultMonth}</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="font-medium">Company Profit</TableCell>
+                                    <TableCell className="text-right font-medium">${summaryData?.data?.companyProfit || 0}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs">{summaryData?.data?.monthKey || defaultMonth}</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="font-medium">User Profit</TableCell>
+                                    <TableCell className="text-right font-medium text-green-600">${summaryData?.data?.userProfit || 0}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs">{summaryData?.data?.monthKey || defaultMonth}</TableCell>
+                                </TableRow>
                             </TableBody>
                         </Table>
                     )}

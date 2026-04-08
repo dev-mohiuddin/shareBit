@@ -9,7 +9,14 @@ export const findShareAccountById = async (id) => {
 };
 
 export const listShareAccountsByAsset = async (assetId) => {
-  return ShareAccount.find({ assetId }).sort({ shareNumber: 1 }).exec();
+  return ShareAccount.find({ assetId })
+    .populate({
+      path: "assignedUserId",
+      select: "_id firstName lastName email",
+      strictPopulate: false,
+    })
+    .sort({ shareNumber: 1 })
+    .exec();
 };
 
 export const assignShareAccount = async (id, data) => {
@@ -25,5 +32,12 @@ export const listShareAccountsByAssetIds = async (assetIds) => {
 };
 
 export const listShareAccountsByUser = async (userId) => {
-  return ShareAccount.find({ assignedUserId: userId }).exec();
+  return ShareAccount.find({ assignedUserId: userId })
+    .populate({
+      path: "assetId",
+      select: "_id name category sharePrice totalShares status",
+      strictPopulate: false,
+    })
+    .sort({ createdAt: -1 })
+    .exec();
 };

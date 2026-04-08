@@ -205,6 +205,14 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["Withdrawals", "Wallet"],
     }),
+    updateWithdrawalStatus: builder.mutation({
+      query: ({ withdrawalId, ...payload }) => ({
+        url: `/api/v1/wallet/withdrawals/${withdrawalId}/status`,
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["Withdrawals", "Wallet"],
+    }),
   }),
 });
 
@@ -233,4 +241,5 @@ export const {
   useGetWithdrawalsQuery,
   useGetAllWithdrawalsQuery,
   useRequestWithdrawalMutation,
+  useUpdateWithdrawalStatusMutation,
 } = apiSlice;

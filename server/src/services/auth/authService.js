@@ -48,7 +48,10 @@ export const signUp = async (data) => {
   const existingUser = await findUserByEmail(data.email, { includeOtp: true });
   if (existingUser) throwError("Email already exists", 409);
 
-  const role = (await findDefaultRole()) || (await findRoleByName("User"));
+  const role =
+    (await findDefaultRole()) ||
+    (await findRoleByName("Investor")) ||
+    (await findRoleByName("User"));
   if (!role) throwError("Default role not found", 500);
 
   const nameParts = data.name.trim().split(" ");

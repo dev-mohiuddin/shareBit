@@ -1,5 +1,11 @@
 import { catchAsync } from "#utils/catchAsync.js";
-import { getWallet, requestWithdrawal, listWithdrawals, listAllWithdrawals } from "#services/wallet/walletService.js";
+import {
+  getWallet,
+  requestWithdrawal,
+  listWithdrawals,
+  listAllWithdrawals,
+  updateWithdrawalStatus,
+} from "#services/wallet/walletService.js";
 
 export const getWalletController = catchAsync(async (req, res) => {
   const wallet = await getWallet(req.user.id || req.user._id);
@@ -19,4 +25,13 @@ export const listWithdrawalsController = catchAsync(async (req, res) => {
 export const listAllWithdrawalsController = catchAsync(async (req, res) => {
   const requests = await listAllWithdrawals();
   res.success({ data: requests, message: "All withdrawals retrieved" });
+});
+
+export const updateWithdrawalStatusController = catchAsync(async (req, res) => {
+  const updated = await updateWithdrawalStatus(
+    req.params.withdrawalId,
+    req.body,
+    req.user
+  );
+  res.success({ data: updated, message: "Withdrawal status updated" });
 });

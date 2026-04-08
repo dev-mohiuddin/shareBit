@@ -5,6 +5,7 @@ export const PLATFORM_ROLES = [
       "Full platform control, governance, and system configuration access.",
     permissions: ["*"],
     hierarchy: 1,
+    isDefault: false,
   },
   {
     name: "OperationsAdmin",
@@ -20,6 +21,7 @@ export const PLATFORM_ROLES = [
       "platform.user:update",
     ],
     hierarchy: 2,
+    isDefault: false,
   },
   {
     name: "ComplianceAdmin",
@@ -31,6 +33,7 @@ export const PLATFORM_ROLES = [
       "platform.audit:export",
     ],
     hierarchy: 3,
+    isDefault: false,
   },
   {
     name: "Investor",
@@ -43,5 +46,6 @@ export const PLATFORM_ROLES = [
       "investor.wallet:withdraw",
     ],
     hierarchy: 4,
+    isDefault: true,
   },
 ];

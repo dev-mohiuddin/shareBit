@@ -1,6 +1,5 @@
 import { PlatformUser } from "#models/userModel.js";
 import { PlatformRole } from "#models/roleModel.js";
-import { hashPassword } from "#utils/bcryptUtil.js";
 
 export const initSystemCompanyUser = async () => {
   try {
@@ -16,13 +15,11 @@ export const initSystemCompanyUser = async () => {
       process.exit(1);
     }
 
-    const hashedPass = await hashPassword(password);
-
     await PlatformUser.create({
       firstName: "System",
       lastName: "Company",
       email,
-      password: hashedPass,
+      password,
       roleId: superAdminRole._id,
       isVerified: true,
       isActive: true,

@@ -150,7 +150,9 @@ export const AdminPanelPage = () => {
   }));
 
   const withdrawalRows = (withdrawalsResponse?.data || []).map((item) => ({
-    userId: item.userId,
+    userId: item.userId?.firstName
+      ? `${item.userId.firstName} ${item.userId.lastName}`
+      : item.userId,
     amount: `$${item.amount}`,
     createdAt: new Date(item.createdAt).toLocaleDateString(),
     status: item.status,

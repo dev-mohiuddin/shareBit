@@ -1,6 +1,5 @@
 import { PlatformUser } from "#models/userModel.js";
 import { PlatformRole } from "#models/roleModel.js";
-import { hashPassword } from "#utils/bcryptUtil.js";
 
 export const initSuperAdmin = async () => {
   try {
@@ -24,12 +23,15 @@ export const initSuperAdmin = async () => {
       return;
     }
 
-    const hashedPassword = await hashPassword(superAdminPassword);
     const newSuperAdmin = await PlatformUser.create({
+      firstName: "Super",
+      lastName: "Admin",
       email: superAdminEmail,
-      password: hashedPassword,
+      password: superAdminPassword,
       roleId: superAdminRole._id,
       isVerified: true,
+      isActive: true,
+      otpStatus: "verified",
     });
 
     console.log("SuperAdmin created successfully:", newSuperAdmin);

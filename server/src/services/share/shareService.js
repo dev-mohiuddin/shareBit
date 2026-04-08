@@ -7,7 +7,7 @@ import {
 } from "#repositories/shareAccountRepository.js";
 import { createShareAssignment, getActiveAssignment } from "#repositories/shareAssignmentRepository.js";
 import { createSharePayment, listPaymentsByShare, sumPaymentsUntil } from "#repositories/sharePaymentRepository.js";
-import { getAssetById } from "#repositories/assetRepository.js";
+import { getAssetById, updateAssetById } from "#repositories/assetRepository.js";
 import { throwError } from "#utils/throwErrorUtil.js";
 import { logAudit } from "#utils/auditLogger.js";
 import { emitToUser } from "#socket/server.js";
@@ -56,6 +56,10 @@ export const assignShare = async (shareAccountId, payload, actor) => {
   const asset = await getAssetById(shareAccount.assetId);
   if (!asset) throwError("Asset not found", 404);
 
+  if ((asset.availableShares ?? asset.totalShares) <= 0) {
+    throwError("No available shares left for this asset", 400);
+  }
+
   const updatedAccount = await assignShareAccount(shareAccountId, {
     status: "active",
     assignedUserId: payload.userId,
@@ -70,6 +74,8 @@ export const assignShare = async (shareAccountId, payload, actor) => {
     assignedAt: payload.assignedAt || new Date(),
     status: "active",
   });
+
+  await updateAssetById(asset._id, { $inc: { availableShares: -1 } });
 
   await logAudit({
     actorId: actor.id || actor._id,
@@ -142,5 +148,27 @@ export const listSharePayments = async (shareAccountId) => {
 };
 
 export const listUserShareAccounts = async (userId) => {
-  return listShareAccountsByUser(userId);
+  const accounts = await listShareAccountsByUser(userId);
+  const dayEnd = new Date();
+
+  const enriched = await Promise.all(
+    accounts.map(async (share) => {
+      const paymentAggregate = await sumPaymentsUntil(
+        share._id,
+        share.assignedUserId,
+        dayEnd
+      );
+      const paidAmount = paymentAggregate?.[0]?.total || 0;
+      const sharePrice = share.assetId?.sharePrice || 0;
+      const ownershipPercentage =
+        sharePrice > 0 ? Number(((paidAmount / sharePrice) * 100).toFixed(2)) : 0;
+
+      const row = share.toObject();
+      row.paidAmount = paidAmount;
+      row.ownershipPercentage = ownershipPercentage;
+      return row;
+    })
+  );
+
+  return enriched;
 };
