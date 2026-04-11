@@ -57,7 +57,17 @@ const platformUserSchema = new mongoose.Schema(
         },
         docNumber: { type: String, required: true, trim: true },
         fileUrl: { type: String, required: true, trim: true },
+        uploadedAt: { type: Date, default: Date.now },
+        isVerified: { type: Boolean, default: false },
+        verifiedAt: { type: Date }
       },
+    ],
+    otherDocuments: [
+      {
+        docType: { type: String, required: true },
+        fileUrl: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now }
+      }
     ],
     profilePhoto: {
       url: { type: String },

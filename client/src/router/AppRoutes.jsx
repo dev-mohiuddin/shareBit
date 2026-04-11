@@ -21,6 +21,8 @@ import { ProfitManagerPage } from "@/pages/admin/profit/ProfitManagerPage";
 import { InvestorInsightsPage } from "@/pages/admin/investor/InvestorInsightsPage";
 import { WithdrawalManagerPage } from "@/pages/admin/withdrawal/WithdrawalManagerPage";
 import { AuditLogsPage } from "@/pages/admin/audit/AuditLogsPage";
+import { PendingApprovalsPage } from "@/pages/admin/user/PendingApprovalsPage";
+import { SettingsPage } from "@/pages/admin/settings/SettingsPage";
 import { UnauthorizedPage } from "@/pages/common/UnauthorizedPage";
 import { NotFoundPage } from "@/pages/common/NotFoundPage";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
@@ -67,6 +69,8 @@ export const AppRoutes = () => {
         { path: ROUTES.ADMIN_INVESTORS, element: <InvestorInsightsPage /> },
         { path: ROUTES.ADMIN_WITHDRAWALS, element: <WithdrawalManagerPage /> },
         { path: ROUTES.ADMIN_AUDIT, element: <AuditLogsPage /> },
+        { path: ROUTES.ADMIN_PENDING_APPROVALS, element: <PendingApprovalsPage /> },
+        { path: ROUTES.ADMIN_SETTINGS, element: <SettingsPage /> },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

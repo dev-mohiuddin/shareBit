@@ -10,6 +10,14 @@ const assetSchema = new mongoose.Schema(
     sharePrice: { type: Number, required: true, min: 0 },
     totalSharePrice: { type: Number, required: true, min: 0 },
     availableShares: { type: Number, required: true, min: 0 },
+    totalAssetValue: { type: Number, default: 0, min: 0 },
+    assetDocuments: [
+      {
+        docName: { type: String, required: true },
+        fileUrl: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now }
+      }
+    ],
     status: {
       type: String,
       enum: ["draft", "active", "paused", "closed"],

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useAppSelector } from "@/app/hooks";
 import { AppRoutes } from "@/router/AppRoutes";
 import { registerSocketUser, getSocket } from "@/lib/socket";
+import { Toaster } from "@/components/ui/toaster";
 
 export const App = () => {
   const userId = useAppSelector((state) => state.auth?.user?._id || state.auth?.user?.id);
@@ -39,5 +40,10 @@ export const App = () => {
     };
   }, [userId]);
 
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      <Toaster />
+    </>
+  );
 };

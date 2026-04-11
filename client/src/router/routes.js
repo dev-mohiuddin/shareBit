@@ -17,6 +17,8 @@ const ROUTES = {
   ADMIN_INVESTORS: "/admin/investors",
   ADMIN_WITHDRAWALS: "/admin/withdrawals",
   ADMIN_AUDIT: "/admin/audit",
+  ADMIN_PENDING_APPROVALS: "/admin/users/pending",
+  ADMIN_SETTINGS: "/admin/settings",
   UNAUTHORIZED: "/unauthorized",
 };
 
