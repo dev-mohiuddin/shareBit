@@ -1,208 +1,319 @@
-import { useState, useEffect } from "react";
-import { Loader2, RefreshCcw, UserPlus } from "lucide-react";
-import { DataTable } from "@/components/ui/dataTable";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Loader2, RefreshCcw, Search, UserPlus } from "lucide-react";
 import {
+  useAssignShareMutation,
   useGetAssetsQuery,
   useGetShareAccountsByAssetQuery,
   useGetUsersQuery,
-  useAssignShareMutation,
 } from "@/features/api/apiSlice";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
+import { formatDate } from "@/lib/adminFinance";
 
-const shareColumns = [
-  { accessorKey: "shareNumber", header: "Share #" },
-  { 
-    accessorKey: "assignedUser", 
-    header: "Investor",
-    cell: ({ row }) => <span className="font-medium">{row.original.assignedUser}</span>
-  },
-  { accessorKey: "assignedAt", header: "Assigned Date" },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge variant={row.original.status === "active" ? "default" : "outline"}>
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <ShareActions row={row} />
-  }
-];
-
-const ShareActions = ({ row }) => {
-    // Placeholder for actions like "Unassign" or "Payment"
-    return null; 
+const getInvestorName = (assignedUser) => {
+  if (!assignedUser) return "Unassigned";
+  if (typeof assignedUser === "string") return assignedUser;
+  const name = `${assignedUser.firstName || ""} ${assignedUser.lastName || ""}`.trim();
+  return name || assignedUser.email || "Investor";
 };
 
 export const ShareManagerPage = () => {
-    const { data: assetsResponse } = useGetAssetsQuery();
-    const assets = assetsResponse?.data || [];
-    
-    // Default to first asset if available
-    const [selectedAssetId, setSelectedAssetId] = useState("");
-    
-    useEffect(() => {
-        if (!selectedAssetId && assets.length > 0) {
-            setSelectedAssetId(assets[0]._id);
-        }
-    }, [assets, selectedAssetId]);
+  const { toast } = useToast();
 
-    const { 
-        data: shareAccountsResponse, 
-        isLoading: sharesLoading, 
-        refetch: refetchShares 
-    } = useGetShareAccountsByAssetQuery(selectedAssetId, { skip: !selectedAssetId });
+  const { data: assetsResponse } = useGetAssetsQuery();
+  const assets = useMemo(() => assetsResponse?.data || [], [assetsResponse?.data]);
 
-    const { data: usersResponse } = useGetUsersQuery();
-    const users = usersResponse?.data || [];
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-    const [assignShare, { isLoading: isAssigning }] = useAssignShareMutation();
-    const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-    const [selectedShareId, setSelectedShareId] = useState(null);
-    const [selectedUserId, setSelectedUserId] = useState("");
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedShare, setSelectedShare] = useState(null);
+  const [selectedInvestorId, setSelectedInvestorId] = useState("");
 
-    const shareRows = (shareAccountsResponse?.data || []).map((share) => ({
+  const { data: usersResponse } = useGetUsersQuery();
+  const users = useMemo(() => usersResponse?.data || [], [usersResponse?.data]);
+
+  const activeAssetId = selectedAssetId || assets[0]?._id || "";
+
+  const selectedAsset = useMemo(
+    () => assets.find((asset) => asset._id === activeAssetId) || null,
+    [activeAssetId, assets]
+  );
+
+  const {
+    data: shareAccountsResponse,
+    isFetching: isFetchingShares,
+    refetch: refetchShares,
+  } = useGetShareAccountsByAssetQuery(activeAssetId, { skip: !activeAssetId });
+
+  const [assignShare, { isLoading: isAssigning }] = useAssignShareMutation();
+
+  const rows = useMemo(
+    () =>
+      (shareAccountsResponse?.data || []).map((share) => ({
         id: share._id,
         shareNumber: share.shareNumber,
-        assignedUser: share.assignedUserId?.firstName 
-            ? `${share.assignedUserId.firstName} ${share.assignedUserId.lastName}` 
-            : (share.assignedUserId || "Unassigned"), // Handle if populate is not working or if unassigned
-        assignedAt: share.assignedAt ? new Date(share.assignedAt).toLocaleDateString() : "-",
         status: share.status,
-        raw: share
-    }));
+        assignedUser: share.assignedUserId,
+        assignedAt: share.assignedAt,
+      })),
+    [shareAccountsResponse?.data]
+  );
 
-    const handleAssignClick = () => {
-        // This is a bit complex as we need to select a share to assign. 
-        // For simplicity, let's just show the table and maybe have an action on the row.
-        // But the requirement says "Manual share assignment".
-        // Let's assume the user clicks a row or a button to assign.
-        // Better yet, add an "Assign" button to rows that are "inactive" or "available".
-    };
-    
-    const onAssignSubmit = async () => {
-        if (!selectedShareId || !selectedUserId) return;
-        try {
-            await assignShare({
-                shareAccountId: selectedShareId,
-                userId: selectedUserId
-            }).unwrap();
-            setIsAssignDialogOpen(false);
-            setSelectedShareId(null);
-            setSelectedUserId("");
-            refetchShares();
-        } catch (error) {
-            console.error("Failed to assign share:", error);
-        }
-    };
+  const summary = useMemo(() => {
+    const total = rows.length;
+    const active = rows.filter((row) => row.status === "active").length;
+    const inactive = Math.max(total - active, 0);
+    return { total, active, inactive };
+  }, [rows]);
 
-    // Update columns to include an Assign button
-    const columnsWithAction = [
-        ...shareColumns,
-        {
-            id: "assign_action",
-            header: "Action",
-            cell: ({ row }) => {
-                if (row.original.status !== "active") {
-                    return (
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                                setSelectedShareId(row.original.id);
-                                setIsAssignDialogOpen(true);
-                            }}
-                        >
-                            <UserPlus className="h-4 w-4 mr-1" /> Assign
-                        </Button>
-                    );
-                }
-                return null;
-            }
-        }
-    ];
+  const filteredRows = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    return rows.filter((row) => {
+      const investorName = getInvestorName(row.assignedUser).toLowerCase();
+      const searchMatch =
+        !term || investorName.includes(term) || String(row.shareNumber).includes(term);
+      const statusMatch = statusFilter === "all" || row.status === statusFilter;
+      return searchMatch && statusMatch;
+    });
+  }, [rows, searchQuery, statusFilter]);
 
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Share Management</h1>
-                    <p className="text-muted-foreground">Monitor and assign shares to investors.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                     <Button variant="outline" size="icon" onClick={refetchShares} disabled={sharesLoading || !selectedAssetId}>
-                        <RefreshCcw className={`h-4 w-4 ${sharesLoading ? "animate-spin" : ""}`} />
-                    </Button>
-                </div>
+  const investorOptions = useMemo(() => {
+    return users.filter((user) => {
+      const role = String(user?.roleName || "").toLowerCase();
+      return !role || role.includes("invest") || role.includes("user");
+    });
+  }, [users]);
+
+  const openAssignModal = (row) => {
+    setSelectedShare(row);
+    setSelectedInvestorId("");
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssign = async () => {
+    if (!selectedShare || !selectedInvestorId) return;
+
+    try {
+      await assignShare({
+        shareAccountId: selectedShare.id,
+        userId: selectedInvestorId,
+      }).unwrap();
+
+      toast({
+        title: "Share assigned",
+        description: `Share #${selectedShare.shareNumber} assigned successfully.`,
+      });
+
+      setAssignDialogOpen(false);
+      setSelectedShare(null);
+      setSelectedInvestorId("");
+      await refetchShares();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Assignment failed",
+        description: error?.data?.message || "Unable to assign share.",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-slate-50">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-slate-300">Allocation Workspace</p>
+            <h1 className="text-2xl font-semibold">Share Assignment Manager</h1>
+            <p className="mt-2 text-sm text-slate-300">
+              Assign available shares quickly and continue payment capture in the dedicated payment workspace.
+            </p>
+          </div>
+          <Button asChild variant="secondary" className="w-full md:w-auto">
+            <Link to="/admin/payments">
+              Open Share Payments
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Total Shares</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{summary.total}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Assigned</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{summary.active}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Available</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{summary.inactive}</CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assignment Table</CardTitle>
+          <CardDescription>
+            Filter and assign shares. Assigned shares can immediately receive payment entries.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 lg:grid-cols-[1fr,220px,220px,auto]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by share # or investor"
+              />
             </div>
 
-            <Card>
-                <CardHeader className="px-6 py-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                         <CardTitle>Asset Shares</CardTitle>
-                         <div className="w-full md:w-64">
-                            <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Asset" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {assets.map(asset => (
-                                        <SelectItem key={asset._id} value={asset._id}>{asset.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <DataTable
-                        columns={columnsWithAction}
-                        data={shareRows}
-                        searchKey="shareNumber"
-                        emptyMessage={sharesLoading ? "Loading shares..." : (!selectedAssetId ? "Select an asset to view shares." : "No shares found.")}
-                    />
-                </CardContent>
-            </Card>
+            <Select value={activeAssetId} onValueChange={setSelectedAssetId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select asset" />
+              </SelectTrigger>
+              <SelectContent>
+                {assets.map((asset) => (
+                  <SelectItem key={asset._id} value={asset._id}>
+                    {asset.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Assign Share to Investor</DialogTitle>
-                        <DialogDescription>
-                            Select an investor to assign this share to.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 space-y-4">
-                         <div className="space-y-2">
-                            <Label>Investor</Label>
-                            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Investor" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {users.map(user => (
-                                        <SelectItem key={user._id} value={user._id}>
-                                            {user.firstName} {user.lastName} ({user.email})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                         </div>
-                         <Button onClick={onAssignSubmit} disabled={isAssigning || !selectedUserId} className="w-full">
-                            {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirm Assignment
-                         </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="active">Assigned</SelectItem>
+                <SelectItem value="inactive">Available</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" onClick={refetchShares} disabled={isFetchingShares || !activeAssetId}>
+              <RefreshCcw className={`mr-2 h-4 w-4 ${isFetchingShares ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Share</TableHead>
+                  <TableHead>Investor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Assigned Date</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">#{row.shareNumber}</TableCell>
+                    <TableCell>{getInvestorName(row.assignedUser)}</TableCell>
+                    <TableCell>
+                      <Badge variant={row.status === "active" ? "default" : "outline"}>{row.status}</Badge>
+                    </TableCell>
+                    <TableCell>{formatDate(row.assignedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      {row.status !== "active" ? (
+                        <Button size="sm" variant="outline" onClick={() => openAssignModal(row)}>
+                          <UserPlus className="mr-1 h-4 w-4" />
+                          Assign
+                        </Button>
+                      ) : (
+                        <Button size="sm" asChild>
+                          <Link to="/admin/payments">Manage Payment</Link>
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {filteredRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-20 text-center text-sm text-muted-foreground">
+                      {isFetchingShares ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Loading shares...
+                        </span>
+                      ) : (
+                        "No shares match current filters."
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {selectedAsset && (
+            <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+              Asset share price: <span className="font-medium text-foreground">${selectedAsset.sharePrice}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Share #{selectedShare?.shareNumber}</DialogTitle>
+            <DialogDescription>Select an investor to activate this share account.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Investor</Label>
+              <Select value={selectedInvestorId} onValueChange={setSelectedInvestorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select investor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {investorOptions.map((user) => (
+                    <SelectItem key={user._id} value={user._id}>
+                      {getInvestorName(user)} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button className="w-full" onClick={handleAssign} disabled={isAssigning || !selectedInvestorId}>
+              {isAssigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              Confirm Assignment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 };

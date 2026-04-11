@@ -230,6 +230,7 @@ export const {
   useAssignShareMutation,
   useRecordSharePaymentMutation,
   useGetSharePaymentsQuery,
+  useLazyGetSharePaymentsQuery,
   useGetMyShareAccountsQuery,
   useGetAuditLogsQuery,
   useGetProfitSummaryQuery,

@@ -16,7 +16,9 @@ import { ProfilePage } from "@/pages/user/profile/ProfilePage";
 import { AdminPanelPage } from "@/pages/admin/dashboard/AdminPanelPage";
 import { AssetManagerPage } from "@/pages/admin/asset/AssetManagerPage";
 import { ShareManagerPage } from "@/pages/admin/share/ShareManagerPage";
+import { SharePaymentPage } from "@/pages/admin/payment/SharePaymentPage";
 import { ProfitManagerPage } from "@/pages/admin/profit/ProfitManagerPage";
+import { InvestorInsightsPage } from "@/pages/admin/investor/InvestorInsightsPage";
 import { WithdrawalManagerPage } from "@/pages/admin/withdrawal/WithdrawalManagerPage";
 import { AuditLogsPage } from "@/pages/admin/audit/AuditLogsPage";
 import { UnauthorizedPage } from "@/pages/common/UnauthorizedPage";
@@ -60,7 +62,9 @@ export const AppRoutes = () => {
         { path: ROUTES.ADMIN, element: <AdminPanelPage /> },
         { path: ROUTES.ADMIN_ASSETS, element: <AssetManagerPage /> },
         { path: ROUTES.ADMIN_SHARES, element: <ShareManagerPage /> },
+        { path: ROUTES.ADMIN_PAYMENTS, element: <SharePaymentPage /> },
         { path: ROUTES.ADMIN_PROFIT, element: <ProfitManagerPage /> },
+        { path: ROUTES.ADMIN_INVESTORS, element: <InvestorInsightsPage /> },
         { path: ROUTES.ADMIN_WITHDRAWALS, element: <WithdrawalManagerPage /> },
         { path: ROUTES.ADMIN_AUDIT, element: <AuditLogsPage /> },
       ],
