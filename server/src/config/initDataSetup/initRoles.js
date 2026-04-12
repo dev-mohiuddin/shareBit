@@ -1,6 +1,15 @@
 import { PlatformRole } from "#models/roleModel.js";
 import { PLATFORM_ROLES } from "#constants/roles.js";
 
+const sortPermissions = (permissions = []) => [...permissions].sort();
+
+const arePermissionsEqual = (left = [], right = []) => {
+  const a = sortPermissions(left);
+  const b = sortPermissions(right);
+  if (a.length !== b.length) return false;
+  return a.every((item, index) => item === b[index]);
+};
+
 export const initPlatformRoles = async () => {
   try {
     await Promise.all(
@@ -12,10 +21,19 @@ export const initPlatformRoles = async () => {
           return;
         }
 
-        if (roleData.isDefault && !existingRole.isDefault) {
-          existingRole.isDefault = true;
+        const shouldSync =
+          existingRole.description !== roleData.description ||
+          existingRole.hierarchy !== roleData.hierarchy ||
+          existingRole.isDefault !== roleData.isDefault ||
+          !arePermissionsEqual(existingRole.permissions, roleData.permissions);
+
+        if (shouldSync) {
+          existingRole.description = roleData.description;
+          existingRole.permissions = roleData.permissions;
+          existingRole.hierarchy = roleData.hierarchy;
+          existingRole.isDefault = roleData.isDefault;
           await existingRole.save();
-          console.log(`Platform Role updated as default: ${roleData.name}`);
+          console.log(`Platform Role synced: ${roleData.name}`);
         }
       })
     );

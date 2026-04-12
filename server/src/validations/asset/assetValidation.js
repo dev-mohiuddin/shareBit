@@ -3,18 +3,23 @@ import { z } from "zod";
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
 export const createAssetSchema = z.object({
-  body: z.object({
-    name: z.string().min(2),
-    description: z.string().optional(),
-    category: z.string().optional(),
-    location: z.string().optional(),
-    totalShares: z.number().int().min(1),
-    sharePrice: z.number().min(0),
-    totalSharePrice: z.number().min(0).optional(),
-    availableShares: z.number().min(0).optional(),
-    status: z.enum(["draft", "active", "paused", "closed"]).optional(),
-    createdBy: objectId.optional(),
-  }),
+  body: z
+    .object({
+      name: z.string().min(2),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      location: z.string().optional(),
+      totalShares: z.number().int().min(1),
+      sharePrice: z.number().min(0).optional(),
+      totalAssetValue: z.number().min(0).optional(),
+      totalSharePrice: z.number().min(0).optional(),
+      availableShares: z.number().min(0).optional(),
+      status: z.enum(["draft", "active", "paused", "closed"]).optional(),
+      createdBy: objectId.optional(),
+    })
+    .refine((val) => val.totalAssetValue !== undefined || val.sharePrice !== undefined, {
+      message: "Either totalAssetValue or sharePrice must be provided",
+    }),
 });
 
 export const updateAssetSchema = z.object({
@@ -29,6 +34,7 @@ export const updateAssetSchema = z.object({
       location: z.string().optional(),
       totalShares: z.number().int().min(1).optional(),
       sharePrice: z.number().min(0).optional(),
+      totalAssetValue: z.number().min(0).optional(),
       totalSharePrice: z.number().min(0).optional(),
       availableShares: z.number().min(0).optional(),
       status: z.enum(["draft", "active", "paused", "closed"]).optional(),

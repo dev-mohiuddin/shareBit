@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, Loader2, RefreshCcw, Users, Wallet } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Activity, BarChart3, Loader2, Plus, RefreshCcw, Users, Wallet } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
+  useCreateInvestorByAdminMutation,
   useGetAssetsQuery,
+  useGetUsersQuery,
   useGetShareAccountsByAssetQuery,
   useLazyGetSharePaymentsQuery,
 } from "@/features/api/apiSlice";
+import { useAppSelector } from "@/app/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import {
   formatCurrency,
   formatDate,
@@ -18,6 +28,15 @@ import {
   getSharePaymentMetrics,
   sumPaymentsUntilDate,
 } from "@/lib/adminFinance";
+
+const createInvestorSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  phone: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
+});
 
 const getInvestorIdentity = (assignedUser) => {
   if (!assignedUser) return null;
@@ -37,14 +56,97 @@ const getInvestorIdentity = (assignedUser) => {
   };
 };
 
+const getRoleName = (user) => user?.roleName || user?.roleId?.name || "";
+
 export const InvestorInsightsPage = () => {
+  const { toast } = useToast();
+  const authUser = useAppSelector((state) => state.auth.user);
+  const canCreateInvestor = useMemo(() => {
+    const permissions = authUser?.permissions || [];
+    return permissions.includes("*") || permissions.includes("platform.user:create");
+  }, [authUser?.permissions]);
+
   const { data: assetsResponse } = useGetAssetsQuery();
+  const {
+    data: usersResponse,
+    isFetching: isFetchingUsers,
+    refetch: refetchUsers,
+  } = useGetUsersQuery();
+  const [createInvestorByAdmin, { isLoading: isCreatingInvestor }] =
+    useCreateInvestorByAdminMutation();
+
   const assets = useMemo(() => assetsResponse?.data || [], [assetsResponse?.data]);
+  const users = useMemo(() => usersResponse?.data || [], [usersResponse?.data]);
+
+  const [isCreateInvestorDialogOpen, setIsCreateInvestorDialogOpen] = useState(false);
 
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [paymentMap, setPaymentMap] = useState({});
   const [isSyncingPayments, setIsSyncingPayments] = useState(false);
   const [selectedInvestorId, setSelectedInvestorId] = useState("");
+
+  const createInvestorForm = useForm({
+    resolver: zodResolver(createInvestorSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      phone: "",
+      country: "",
+    },
+  });
+
+  const investorAccounts = useMemo(
+    () =>
+      users
+        .filter((user) => {
+          const roleName = String(getRoleName(user)).toLowerCase();
+          return roleName.includes("investor") || roleName.includes("user");
+        })
+        .map((user) => ({
+          id: user._id || user.id,
+          name:
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            user.name ||
+            "Investor",
+          email: user.email || "-",
+          phone: user.phone || "-",
+          country: user.country || "-",
+          roleName: getRoleName(user) || "Investor",
+          status: user.isActive ? (user.isVerified ? "active" : "pending") : "inactive",
+          joinedAt: user.createdAt,
+        })),
+    [users]
+  );
+
+  const handleCreateInvestor = async (values) => {
+    try {
+      await createInvestorByAdmin({
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        email: values.email.trim(),
+        password: values.password,
+        phone: values.phone?.trim() || undefined,
+        country: values.country?.trim() || undefined,
+      }).unwrap();
+
+      toast({
+        title: "Investor created",
+        description: "New investor account is ready to login.",
+      });
+
+      createInvestorForm.reset();
+      setIsCreateInvestorDialogOpen(false);
+      refetchUsers();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Creation failed",
+        description: error?.data?.message || "Could not create investor account.",
+      });
+    }
+  };
 
   const activeAssetId = selectedAssetId || assets[0]?._id || "";
 
@@ -267,6 +369,155 @@ export const InvestorInsightsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-lg">Investor Management</CardTitle>
+            <CardDescription>
+              Create investor accounts from admin panel and review all investor profiles.
+            </CardDescription>
+          </div>
+
+          <Dialog open={isCreateInvestorDialogOpen} onOpenChange={setIsCreateInvestorDialogOpen}>
+            <DialogTrigger asChild>
+              <Button disabled={!canCreateInvestor}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Investor
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Investor Account</DialogTitle>
+                <DialogDescription>
+                  Admin-created investors are verified instantly and can login immediately.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                onSubmit={createInvestorForm.handleSubmit(handleCreateInvestor)}
+                className="space-y-4 py-2"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" {...createInvestorForm.register("firstName")} />
+                    {createInvestorForm.formState.errors.firstName && (
+                      <p className="text-xs text-red-500">
+                        {createInvestorForm.formState.errors.firstName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" {...createInvestorForm.register("lastName")} />
+                    {createInvestorForm.formState.errors.lastName && (
+                      <p className="text-xs text-red-500">
+                        {createInvestorForm.formState.errors.lastName.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" {...createInvestorForm.register("email")} />
+                  {createInvestorForm.formState.errors.email && (
+                    <p className="text-xs text-red-500">{createInvestorForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    {...createInvestorForm.register("password")}
+                  />
+                  {createInvestorForm.formState.errors.password && (
+                    <p className="text-xs text-red-500">
+                      {createInvestorForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone (optional)</Label>
+                    <Input id="phone" {...createInvestorForm.register("phone")} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="country">Country (optional)</Label>
+                    <Input id="country" {...createInvestorForm.register("country")} />
+                  </div>
+                </div>
+
+                {!canCreateInvestor && (
+                  <p className="text-xs text-amber-600">
+                    You do not have permission to create investor accounts.
+                  </p>
+                )}
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isCreatingInvestor || !canCreateInvestor}>
+                    {isCreatingInvestor && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Investor
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {investorAccounts.map((investor) => (
+                  <TableRow key={investor.id}>
+                    <TableCell className="font-medium">{investor.name}</TableCell>
+                    <TableCell>{investor.email}</TableCell>
+                    <TableCell>{investor.phone}</TableCell>
+                    <TableCell>{investor.country}</TableCell>
+                    <TableCell>{investor.roleName}</TableCell>
+                    <TableCell>
+                      <Badge variant={investor.status === "active" ? "default" : "secondary"}>
+                        {investor.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{formatDate(investor.joinedAt, "-")}</TableCell>
+                  </TableRow>
+                ))}
+
+                {investorAccounts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-20 text-center text-sm text-muted-foreground">
+                      {isFetchingUsers ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Loading investors...
+                        </span>
+                      ) : (
+                        "No investor accounts found yet."
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

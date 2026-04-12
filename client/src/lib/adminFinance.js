@@ -146,3 +146,25 @@ export const calculateDailyShareProfitPreview = ({
     companyProfit: dailyProfitPerShare * companyRatio,
   };
 };
+
+export const toMonthKeyFromDateTime = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
+
+export const calculateExpenseLineTotal = ({ quantity, unitCost }) => {
+  const qty = Number(quantity) || 0;
+  const price = Number(unitCost) || 0;
+  return Math.round((qty * price + Number.EPSILON) * 100) / 100;
+};
+
+export const calculateExpenseTotal = (lineItems = []) => {
+  const total = lineItems.reduce(
+    (sum, line) => sum + calculateExpenseLineTotal({ quantity: line.quantity, unitCost: line.unitCost }),
+    0
+  );
+
+  return Math.round((total + Number.EPSILON) * 100) / 100;
+};

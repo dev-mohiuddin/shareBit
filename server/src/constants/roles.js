@@ -11,6 +11,7 @@ export const PLATFORM_ROLES = [
     name: "OperationsAdmin",
     description: "Manages assets, wallets, and operational workflows.",
     permissions: [
+      "platform.user:create",
       "platform.asset:create",
       "platform.asset:read",
       "platform.asset:update",
@@ -27,6 +28,7 @@ export const PLATFORM_ROLES = [
     name: "ComplianceAdmin",
     description: "Manages KYC/AML, audit logs, and compliance checks.",
     permissions: [
+      "platform.user:create",
       "platform.user:read",
       "platform.user:update",
       "platform.audit:read",

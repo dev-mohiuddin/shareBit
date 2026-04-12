@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const createInvestorByAdminSchema = z.object({
+  body: z.object({
+    firstName: z.string().min(1).max(50),
+    lastName: z.string().min(1).max(50),
+    email: z.string().email(),
+    password: z.string().min(8),
+    phone: z.string().min(6).optional().or(z.literal("")),
+    country: z.string().min(2).optional().or(z.literal("")),
+  }),
+});
+
 export const updateMeSchema = z.object({
   body: z
     .object({

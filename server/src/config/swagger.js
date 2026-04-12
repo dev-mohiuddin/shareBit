@@ -105,6 +105,23 @@ const buildSwaggerSpec = () => {
           },
         },
       },
+      "/api/v1/users/investors": {
+        post: {
+          tags: ["Users"],
+          summary: "Create investor from admin",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AdminCreateInvestorRequest" },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Investor created" },
+          },
+        },
+      },
       "/api/v1/assets": {
         post: {
           tags: ["Assets"],
@@ -294,6 +311,70 @@ const buildSwaggerSpec = () => {
           },
         },
       },
+      "/api/v1/assets/{assetId}/pnl/{monthKey}": {
+        get: {
+          tags: ["Profit"],
+          summary: "Get asset monthly PnL statement",
+          parameters: [
+            { name: "assetId", in: "path", required: true, schema: { type: "string" } },
+            { name: "monthKey", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            200: { description: "Asset monthly PnL statement retrieved" },
+          },
+        },
+      },
+      "/api/v1/asset-expenses": {
+        post: {
+          tags: ["Profit"],
+          summary: "Record asset expense",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AssetExpenseRequest" },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Asset expense recorded" },
+          },
+        },
+        get: {
+          tags: ["Profit"],
+          summary: "List asset expense entries",
+          parameters: [
+            { name: "assetId", in: "query", required: false, schema: { type: "string" } },
+            { name: "monthKey", in: "query", required: false, schema: { type: "string" } },
+            {
+              name: "entryType",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["expense", "adjustment", "reversal"] },
+            },
+          ],
+          responses: {
+            200: { description: "Asset expense entries retrieved" },
+          },
+        },
+      },
+      "/api/v1/asset-expenses/corrections": {
+        post: {
+          tags: ["Profit"],
+          summary: "Record asset expense correction or reversal",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AssetExpenseCorrectionRequest" },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Asset expense correction recorded" },
+          },
+        },
+      },
       "/api/v1/profit-ledger/adjustments": {
         post: {
           tags: ["Profit"],
@@ -316,6 +397,7 @@ const buildSwaggerSpec = () => {
           tags: ["Reports"],
           summary: "Profit summary report",
           parameters: [
+            { name: "assetId", in: "query", required: false, schema: { type: "string" } },
             { name: "monthKey", in: "query", required: false, schema: { type: "string" } },
           ],
           responses: {
@@ -378,6 +460,18 @@ const buildSwaggerSpec = () => {
             refreshToken: { type: "string" },
           },
         },
+        AdminCreateInvestorRequest: {
+          type: "object",
+          properties: {
+            firstName: { type: "string" },
+            lastName: { type: "string" },
+            email: { type: "string", format: "email" },
+            password: { type: "string", minLength: 8 },
+            phone: { type: "string" },
+            country: { type: "string" },
+          },
+          required: ["firstName", "lastName", "email", "password"],
+        },
         AssetCreateRequest: {
           type: "object",
           properties: {
@@ -387,11 +481,12 @@ const buildSwaggerSpec = () => {
             location: { type: "string" },
             totalShares: { type: "integer" },
             sharePrice: { type: "number" },
+            totalAssetValue: { type: "number" },
             totalSharePrice: { type: "number" },
             availableShares: { type: "integer" },
             status: { type: "string" },
           },
-          required: ["name", "totalShares", "sharePrice"],
+          required: ["name", "totalShares", "totalAssetValue"],
         },
         AssetUpdateRequest: {
           type: "object",
@@ -402,6 +497,7 @@ const buildSwaggerSpec = () => {
             location: { type: "string" },
             totalShares: { type: "integer" },
             sharePrice: { type: "number" },
+            totalAssetValue: { type: "number" },
             totalSharePrice: { type: "number" },
             availableShares: { type: "integer" },
             status: { type: "string" },
@@ -445,6 +541,48 @@ const buildSwaggerSpec = () => {
             type: { type: "string", enum: ["adjustment", "reversal"] },
           },
           required: ["assetId", "monthKey", "amount", "type"],
+        },
+        AssetExpenseLineItemRequest: {
+          type: "object",
+          properties: {
+            itemName: { type: "string" },
+            description: { type: "string" },
+            quantity: { type: "number" },
+            unitCost: { type: "number" },
+          },
+          required: ["itemName", "quantity", "unitCost"],
+        },
+        AssetExpenseRequest: {
+          type: "object",
+          properties: {
+            assetId: { type: "string" },
+            vendorName: { type: "string" },
+            description: { type: "string" },
+            expenseDateTime: { type: "string", format: "date-time" },
+            lineItems: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AssetExpenseLineItemRequest" },
+            },
+            currency: { type: "string" },
+          },
+          required: ["assetId", "vendorName", "lineItems"],
+        },
+        AssetExpenseCorrectionRequest: {
+          type: "object",
+          properties: {
+            assetId: { type: "string" },
+            vendorName: { type: "string" },
+            description: { type: "string" },
+            expenseDateTime: { type: "string", format: "date-time" },
+            lineItems: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AssetExpenseLineItemRequest" },
+            },
+            currency: { type: "string" },
+            type: { type: "string", enum: ["adjustment", "reversal"] },
+            referenceExpenseId: { type: "string" },
+          },
+          required: ["assetId", "description", "lineItems", "type"],
         },
         ProfitLedgerAdjustmentRequest: {
           type: "object",

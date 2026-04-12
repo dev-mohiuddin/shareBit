@@ -7,13 +7,14 @@ export const validate = (schema) => (req, res, next) => {
     });
     next();
   } catch (err) {
-    const errors = err.errors?.map((e) => ({
+    const issues = err?.issues || err?.errors || [];
+    const errors = issues.map((e) => ({
       field: e.path.join("."),
       message: e.message,
     }));
 
     return res.error({
-      message: errors?.[0]?.message || "Validation failed",
+      message: errors?.[0]?.message || err?.message || "Validation failed",
       statusCode: 422,
       data: null,
       trace:

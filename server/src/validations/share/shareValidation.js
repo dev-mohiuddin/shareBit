@@ -26,7 +26,7 @@ export const recordSharePaymentSchema = z.object({
     amount: z.number().min(0.01),
     paidAt: z.string().datetime().optional(),
     userId: objectId.optional(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
   }),
 });
 

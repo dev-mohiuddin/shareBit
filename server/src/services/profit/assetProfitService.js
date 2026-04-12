@@ -1,5 +1,6 @@
 import { createAssetProfit, listAssetProfitsByAssetMonth } from "#repositories/assetProfitRepository.js";
 import { getAssetById } from "#repositories/assetRepository.js";
+import { recomputeAssetPnlFromMonth } from "#services/profit/assetPnlService.js";
 import { throwError } from "#utils/throwErrorUtil.js";
 import { logAudit } from "#utils/auditLogger.js";
 
@@ -24,6 +25,8 @@ export const recordAssetProfit = async (payload, actor) => {
     entityId: entry._id,
     after: entry.toObject(),
   });
+
+  await recomputeAssetPnlFromMonth(payload.assetId, payload.monthKey);
 
   return entry;
 };

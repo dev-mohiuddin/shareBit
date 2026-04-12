@@ -31,6 +31,13 @@ export const listAssetProfitEntriesSchema = z.object({
   }),
 });
 
+export const getAssetMonthPnlSchema = z.object({
+  params: z.object({
+    assetId: objectId,
+    monthKey,
+  }),
+});
+
 export const createProfitAdjustmentSchema = z.object({
   body: z.object({
     userId: objectId,
@@ -41,6 +48,6 @@ export const createProfitAdjustmentSchema = z.object({
     type: z.enum(["adjustment", "reversal"]),
     currency: z.string().optional(),
     referenceLedgerId: objectId.optional(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
   }),
 });

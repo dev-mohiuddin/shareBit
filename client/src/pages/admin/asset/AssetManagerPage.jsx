@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus, RefreshCcw } from "lucide-react";
@@ -23,6 +23,7 @@ const assetColumns = [
     cell: ({ row }) => <span className="font-medium">{row.original.price}</span>
   },
   { accessorKey: "shares", header: "Total Shares" },
+  { accessorKey: "totalValue", header: "Total Asset Value" },
   { accessorKey: "available", header: "Available" },
   {
     accessorKey: "status",
@@ -38,7 +39,7 @@ const assetColumns = [
 const assetFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   totalShares: z.coerce.number().int().min(1, "Must have at least 1 share"),
-  sharePrice: z.coerce.number().min(0.01, "Price must be positive"),
+  totalAssetValue: z.coerce.number().min(0.01, "Total asset value must be positive"),
   category: z.string().optional(),
   location: z.string().optional(),
 });
@@ -53,11 +54,23 @@ export const AssetManagerPage = () => {
     defaultValues: {
       name: "",
       totalShares: 100,
-      sharePrice: 50,
+      totalAssetValue: 5000,
       category: "",
       location: "",
     }
   });
+
+  const totalSharesInput = useWatch({ control: form.control, name: "totalShares" });
+  const totalAssetValueInput = useWatch({ control: form.control, name: "totalAssetValue" });
+
+  const calculatedSharePrice = useMemo(() => {
+    const shares = Number(totalSharesInput);
+    const totalValue = Number(totalAssetValueInput);
+    if (!Number.isFinite(shares) || shares <= 0) return 0;
+    if (!Number.isFinite(totalValue) || totalValue <= 0) return 0;
+
+    return Math.round(((totalValue / shares) + Number.EPSILON) * 100) / 100;
+  }, [totalAssetValueInput, totalSharesInput]);
 
   const assets = assetsResponse?.data || [];
   
@@ -66,6 +79,7 @@ export const AssetManagerPage = () => {
     name: asset.name,
     price: `$${asset.sharePrice}`,
     shares: asset.totalShares,
+    totalValue: `$${asset.totalAssetValue ?? asset.totalSharePrice ?? asset.totalShares * asset.sharePrice}`,
     available: asset.availableShares ?? asset.totalShares,
     status: asset.status,
   }));
@@ -118,9 +132,12 @@ export const AssetManagerPage = () => {
                       <Input id="totalShares" type="number" {...form.register("totalShares")} />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="sharePrice">Price per Share</Label>
-                      <Input id="sharePrice" type="number" step="0.01" {...form.register("sharePrice")} />
+                      <Label htmlFor="totalAssetValue">Total Asset Value</Label>
+                      <Input id="totalAssetValue" type="number" step="0.01" {...form.register("totalAssetValue")} />
                     </div>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                    Calculated price per share: <span className="font-semibold">${calculatedSharePrice.toFixed(2)}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">

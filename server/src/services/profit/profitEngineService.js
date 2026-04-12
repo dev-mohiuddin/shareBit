@@ -3,6 +3,7 @@ import { listShareAccountsByAssetIds } from "#repositories/shareAccountRepositor
 import { sumPaymentsUntil } from "#repositories/sharePaymentRepository.js";
 import { findWalletByUserId, createWallet, updateWalletBalance } from "#repositories/walletRepository.js";
 import { getAssetById } from "#repositories/assetRepository.js";
+import { getAssetMonthPnlStatement } from "#services/profit/assetPnlService.js";
 import { createProfitLedger, findProfitEntry } from "#repositories/profitLedgerRepository.js";
 import { createTransaction } from "#repositories/transactionRepository.js";
 import { getCompanyUser } from "#utils/companyUtil.js";
@@ -88,9 +89,8 @@ export const runDailyProfitDistribution = async (date = new Date()) => {
     const asset = await getAssetById(assetId);
     if (!asset) continue;
 
-    const totalProfit = assetProfitEntries
-      .filter((entry) => entry.assetId.toString() === assetId)
-      .reduce((sum, entry) => sum + entry.amount, 0);
+    const monthStatement = await getAssetMonthPnlStatement(assetId, monthKey);
+    const totalProfit = Number(monthStatement?.distributableProfit) || 0;
 
     if (!totalProfit || asset.totalShares <= 0) continue;
 

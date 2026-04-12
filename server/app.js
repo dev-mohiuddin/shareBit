@@ -23,7 +23,7 @@ app.use(attachRequestId);
 app.use(requestLogger);
 app.use(securityMiddleware);
 app.use(globalResponse);
-app.use(globalRateLimiter(100, 15));
+app.use(globalRateLimiter(1000, 15));
 
 setupSwagger(app);
 

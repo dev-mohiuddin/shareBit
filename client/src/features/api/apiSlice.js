@@ -38,6 +38,8 @@ export const apiSlice = createApi({
     "SharePayments",
     "ProfitSummary",
     "AssetProfit",
+    "AssetExpenses",
+    "AssetMonthPnl",
     "ProfitLedger",
     "AuditLogs",
     "Wallet",
@@ -108,6 +110,14 @@ export const apiSlice = createApi({
       query: () => "/api/v1/users",
       providesTags: ["Users"],
     }),
+    createInvestorByAdmin: builder.mutation({
+      query: (payload) => ({
+        url: "/api/v1/users/investors",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["Users"],
+    }),
     getAssets: builder.query({
       query: () => "/api/v1/assets",
       providesTags: ["Assets"],
@@ -153,8 +163,19 @@ export const apiSlice = createApi({
       providesTags: ["AuditLogs"],
     }),
     getProfitSummary: builder.query({
-      query: (monthKey) =>
-        `/api/v1/reports/profit-summary${monthKey ? `?monthKey=${monthKey}` : ""}`,
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+
+        if (typeof params === "string") {
+          if (params) searchParams.set("monthKey", params);
+        } else if (params && typeof params === "object") {
+          if (params.monthKey) searchParams.set("monthKey", params.monthKey);
+          if (params.assetId) searchParams.set("assetId", params.assetId);
+        }
+
+        const query = searchParams.toString();
+        return `/api/v1/reports/profit-summary${query ? `?${query}` : ""}`;
+      },
       providesTags: ["ProfitSummary"],
     }),
     createAssetProfit: builder.mutation({
@@ -163,7 +184,7 @@ export const apiSlice = createApi({
         method: "POST",
         body: payload,
       }),
-      invalidatesTags: ["AssetProfit", "ProfitSummary"],
+      invalidatesTags: ["AssetProfit", "ProfitSummary", "AssetMonthPnl"],
     }),
     createAssetProfitAdjustment: builder.mutation({
       query: (payload) => ({
@@ -171,11 +192,42 @@ export const apiSlice = createApi({
         method: "POST",
         body: payload,
       }),
-      invalidatesTags: ["AssetProfit", "ProfitSummary"],
+      invalidatesTags: ["AssetProfit", "ProfitSummary", "AssetMonthPnl"],
     }),
     getAssetProfitEntries: builder.query({
       query: ({ assetId, monthKey }) => `/api/v1/assets/${assetId}/profit/${monthKey}`,
       providesTags: ["AssetProfit"],
+    }),
+    getAssetMonthPnl: builder.query({
+      query: ({ assetId, monthKey }) => `/api/v1/assets/${assetId}/pnl/${monthKey}`,
+      providesTags: ["AssetMonthPnl"],
+    }),
+    getAssetExpenses: builder.query({
+      query: ({ assetId, monthKey, entryType } = {}) => {
+        const params = new URLSearchParams();
+        if (assetId) params.set("assetId", assetId);
+        if (monthKey) params.set("monthKey", monthKey);
+        if (entryType) params.set("entryType", entryType);
+        const query = params.toString();
+        return `/api/v1/asset-expenses${query ? `?${query}` : ""}`;
+      },
+      providesTags: ["AssetExpenses"],
+    }),
+    createAssetExpense: builder.mutation({
+      query: (payload) => ({
+        url: "/api/v1/asset-expenses",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["AssetExpenses", "ProfitSummary", "AssetMonthPnl"],
+    }),
+    createAssetExpenseCorrection: builder.mutation({
+      query: (payload) => ({
+        url: "/api/v1/asset-expenses/corrections",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["AssetExpenses", "ProfitSummary", "AssetMonthPnl"],
     }),
     createProfitLedgerAdjustment: builder.mutation({
       query: (payload) => ({
@@ -224,6 +276,7 @@ export const {
   useRefreshTokenMutation,
   useGetMeQuery,
   useGetUsersQuery,
+  useCreateInvestorByAdminMutation,
   useGetAssetsQuery,
   useCreateAssetMutation,
   useGetShareAccountsByAssetQuery,
@@ -237,6 +290,10 @@ export const {
   useCreateAssetProfitMutation,
   useCreateAssetProfitAdjustmentMutation,
   useGetAssetProfitEntriesQuery,
+  useGetAssetMonthPnlQuery,
+  useGetAssetExpensesQuery,
+  useCreateAssetExpenseMutation,
+  useCreateAssetExpenseCorrectionMutation,
   useCreateProfitLedgerAdjustmentMutation,
   useGetWalletQuery,
   useGetWithdrawalsQuery,
