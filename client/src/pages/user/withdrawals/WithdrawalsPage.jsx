@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { ConfirmationDialog } from "@/components/dialogs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export const WithdrawalsPage = () => {
   const [method, setMethod] = useState("bank_transfer");
   const [reason, setReason] = useState("");
   const [errorText, setErrorText] = useState("");
+  const [pendingRequest, setPendingRequest] = useState(null);
 
   const withdrawals = useMemo(() => data?.data || [], [data]);
 
@@ -36,14 +38,25 @@ export const WithdrawalsPage = () => {
       return;
     }
 
+    setPendingRequest({
+      amount: parsedAmount,
+      method,
+      reason,
+    });
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pendingRequest) return;
+
     try {
       await requestWithdrawal({
-        amount: parsedAmount,
-        method,
-        metadata: reason ? { reason } : {},
+        amount: pendingRequest.amount,
+        method: pendingRequest.method,
+        metadata: pendingRequest.reason ? { reason: pendingRequest.reason } : {},
       }).unwrap();
       setAmount("");
       setReason("");
+      setPendingRequest(null);
     } catch (error) {
       setErrorText(error?.data?.message || "Failed to submit withdrawal request.");
     }
@@ -149,6 +162,18 @@ export const WithdrawalsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        open={Boolean(pendingRequest)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRequest(null);
+        }}
+        title="Submit withdrawal request?"
+        description="This request will be sent to admin for review before payout."
+        confirmLabel="Submit Request"
+        isLoading={isSubmitting}
+        onConfirm={handleConfirmSubmit}
+      />
     </div>
   );
 };

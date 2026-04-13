@@ -2,6 +2,85 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import validator from "validator";
 
+const payoutBankAccountSchema = new mongoose.Schema(
+  {
+    bankName: { type: String, trim: true },
+    accountHolderName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    routingNumber: { type: String, trim: true },
+    branchName: { type: String, trim: true },
+    verificationStatus: {
+      type: String,
+      enum: ["unverified", "verified", "rejected"],
+      default: "unverified",
+    },
+    verifiedAt: { type: Date },
+  },
+  { _id: false }
+);
+
+const payoutBkashSchema = new mongoose.Schema(
+  {
+    number: { type: String, trim: true },
+    accountType: {
+      type: String,
+      enum: ["personal", "agent"],
+      default: "personal",
+    },
+    accountHolderName: { type: String, trim: true },
+    verificationStatus: {
+      type: String,
+      enum: ["unverified", "verified", "rejected"],
+      default: "unverified",
+    },
+    verifiedAt: { type: Date },
+  },
+  { _id: false }
+);
+
+const payoutDetailsSchema = new mongoose.Schema(
+  {
+    preferredMethod: {
+      type: String,
+      enum: ["bank", "bkash"],
+      default: "bank",
+    },
+    bankAccount: payoutBankAccountSchema,
+    bkash: payoutBkashSchema,
+  },
+  { _id: false }
+);
+
+const profileCompletionSchema = new mongoose.Schema(
+  {
+    identitySubmitted: { type: Boolean, default: false },
+    payoutSubmitted: { type: Boolean, default: false },
+    submittedForApproval: { type: Boolean, default: false },
+    completedAt: { type: Date },
+  },
+  { _id: false }
+);
+
+const investorApprovalSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["draft", "submitted", "approved", "rejected", "on-hold"],
+      default: "draft",
+    },
+    submittedAt: { type: Date },
+    reviewedAt: { type: Date },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PlatformUser",
+    },
+    approvalNote: { type: String, trim: true },
+    rejectionReason: { type: String, trim: true },
+    holdReason: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const investorProfileSchema = new mongoose.Schema(
   {
     kycStatus: {
@@ -23,6 +102,9 @@ const investorProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    payoutDetails: payoutDetailsSchema,
+    profileCompletion: profileCompletionSchema,
+    approval: investorApprovalSchema,
   },
   { _id: false }
 );
@@ -57,17 +139,29 @@ const platformUserSchema = new mongoose.Schema(
         },
         docNumber: { type: String, required: true, trim: true },
         fileUrl: { type: String, required: true, trim: true },
+        publicId: { type: String, trim: true },
         uploadedAt: { type: Date, default: Date.now },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "PlatformUser",
+        },
         isVerified: { type: Boolean, default: false },
-        verifiedAt: { type: Date }
+        verifiedAt: { type: Date },
+        verificationNote: { type: String, trim: true },
       },
     ],
     otherDocuments: [
       {
         docType: { type: String, required: true },
+        docNumber: { type: String, trim: true },
         fileUrl: { type: String, required: true },
-        uploadedAt: { type: Date, default: Date.now }
-      }
+        publicId: { type: String, trim: true },
+        uploadedAt: { type: Date, default: Date.now },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "PlatformUser",
+        },
+      },
     ],
     profilePhoto: {
       url: { type: String },

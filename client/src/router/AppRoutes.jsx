@@ -19,6 +19,7 @@ import { ShareManagerPage } from "@/pages/admin/share/ShareManagerPage";
 import { SharePaymentPage } from "@/pages/admin/payment/SharePaymentPage";
 import { ProfitManagerPage } from "@/pages/admin/profit/ProfitManagerPage";
 import { InvestorInsightsPage } from "@/pages/admin/investor/InvestorInsightsPage";
+import { InvestorDetailsPage } from "@/pages/admin/investor/InvestorDetailsPage";
 import { WithdrawalManagerPage } from "@/pages/admin/withdrawal/WithdrawalManagerPage";
 import { AuditLogsPage } from "@/pages/admin/audit/AuditLogsPage";
 import { PendingApprovalsPage } from "@/pages/admin/user/PendingApprovalsPage";
@@ -67,6 +68,7 @@ export const AppRoutes = () => {
         { path: ROUTES.ADMIN_PAYMENTS, element: <SharePaymentPage /> },
         { path: ROUTES.ADMIN_PROFIT, element: <ProfitManagerPage /> },
         { path: ROUTES.ADMIN_INVESTORS, element: <InvestorInsightsPage /> },
+        { path: ROUTES.ADMIN_INVESTOR_DETAILS, element: <InvestorDetailsPage /> },
         { path: ROUTES.ADMIN_WITHDRAWALS, element: <WithdrawalManagerPage /> },
         { path: ROUTES.ADMIN_AUDIT, element: <AuditLogsPage /> },
         { path: ROUTES.ADMIN_PENDING_APPROVALS, element: <PendingApprovalsPage /> },

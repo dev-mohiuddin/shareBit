@@ -51,5 +51,7 @@ profitLedgerSchema.index(
   { shareAccountId: 1, ledgerDate: 1, userId: 1, type: 1 },
   { unique: true }
 );
+profitLedgerSchema.index({ userId: 1, ledgerDate: -1 });
+profitLedgerSchema.index({ userId: 1, assetId: 1, ledgerDate: -1 });
 
 export const ProfitLedger = mongoose.model("ProfitLedger", profitLedgerSchema);

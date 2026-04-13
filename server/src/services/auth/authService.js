@@ -73,6 +73,14 @@ export const signUp = async (data) => {
     otpCode,
     otpExpiry,
     otpStatus: "pending",
+    investorProfile: {
+      approval: { status: "draft" },
+      profileCompletion: {
+        identitySubmitted: false,
+        payoutSubmitted: false,
+        submittedForApproval: false,
+      },
+    },
   });
 
   await createWallet({ userId: user._id, balance: 0, currency: "USD" });

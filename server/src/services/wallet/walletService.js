@@ -1,4 +1,5 @@
 import { findWalletByUserId, createWallet } from "#repositories/walletRepository.js";
+import { findUserById } from "#repositories/userRepository.js";
 import {
   createWithdrawalRequest,
   getWithdrawalRequestsByUser,
@@ -11,6 +12,28 @@ import { createTransaction } from "#repositories/transactionRepository.js";
 import { throwError } from "#utils/throwErrorUtil.js";
 import { logAudit } from "#utils/auditLogger.js";
 
+const ensureInvestorFinancialAccess = async (userId) => {
+  const user = await findUserById(userId, { populateRole: true });
+  if (!user) throwError("User not found", 404);
+
+  const roleName = String(user.roleId?.name || "").toLowerCase();
+  const isInvestorRole = roleName.includes("investor") || roleName.includes("user");
+
+  if (!isInvestorRole) return;
+
+  if (!user.isActive) {
+    throwError("Account is inactive. Financial actions are blocked", 403);
+  }
+
+  const approvalStatus = user.investorProfile?.approval?.status;
+  if (approvalStatus && approvalStatus !== "approved") {
+    throwError(
+      "Your profile is not approved yet. Financial actions are blocked until approval",
+      403
+    );
+  }
+};
+
 export const getWallet = async (userId) => {
   let wallet = await findWalletByUserId(userId);
   if (!wallet) {
@@ -20,6 +43,8 @@ export const getWallet = async (userId) => {
 };
 
 export const requestWithdrawal = async (userId, payload, actor) => {
+  await ensureInvestorFinancialAccess(userId);
+
   const wallet = await getWallet(userId);
   if (payload.amount > wallet.balance) throwError("Insufficient balance", 400);
 

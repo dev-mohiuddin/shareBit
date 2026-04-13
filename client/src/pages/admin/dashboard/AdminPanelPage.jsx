@@ -164,7 +164,7 @@ export const AdminPanelPage = () => {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button variant="outline" className="border-slate-400 text-slate-50 hover:bg-slate-800" onClick={refreshAll}>
+            <Button variant="secondary" className="text-slate-900" onClick={refreshAll}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
@@ -176,7 +176,7 @@ export const AdminPanelPage = () => {
         {quickStats.map((item) => (
           <Card key={item.label}>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 {item.icon}
                 {item.label}
               </CardTitle>

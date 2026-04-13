@@ -45,6 +45,9 @@ export const apiSlice = createApi({
     "Wallet",
     "Users",
     "Withdrawals",
+    "InvestorDocuments",
+    "InvestorAnalytics",
+    "Transactions",
   ],
   endpoints: (builder) => ({
     login: builder.mutation({
@@ -106,6 +109,31 @@ export const apiSlice = createApi({
       query: () => "/api/v1/users/me",
       providesTags: ["Users"],
     }),
+    updateMe: builder.mutation({
+      query: (payload) => ({
+        url: "/api/v1/users/me",
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["Users"],
+    }),
+    getMyInvestorDashboardSnapshot: builder.query({
+      query: () => "/api/v1/users/me/investor-dashboard",
+      providesTags: ["InvestorAnalytics", "Wallet"],
+    }),
+    getMyTransactions: builder.query({
+      query: (params = {}) => {
+        const search = new URLSearchParams();
+        if (params.type) search.set("type", params.type);
+        if (params.startDate) search.set("startDate", params.startDate);
+        if (params.endDate) search.set("endDate", params.endDate);
+        if (params.limit) search.set("limit", String(params.limit));
+        if (params.skip) search.set("skip", String(params.skip));
+        const query = search.toString();
+        return `/api/v1/users/me/transactions${query ? `?${query}` : ""}`;
+      },
+      providesTags: ["Transactions"],
+    }),
     getUsers: builder.query({
       query: () => "/api/v1/users",
       providesTags: ["Users"],
@@ -117,6 +145,66 @@ export const apiSlice = createApi({
         body: payload,
       }),
       invalidatesTags: ["Users"],
+    }),
+    getInvestorDetails: builder.query({
+      query: (investorId) => `/api/v1/users/investors/${investorId}`,
+      providesTags: ["InvestorAnalytics"],
+    }),
+    updateInvestorByAdmin: builder.mutation({
+      query: ({ investorId, ...payload }) => ({
+        url: `/api/v1/users/investors/${investorId}`,
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["Users", "InvestorAnalytics"],
+    }),
+    updateInvestorStatusByAdmin: builder.mutation({
+      query: ({ investorId, ...payload }) => ({
+        url: `/api/v1/users/investors/${investorId}/status`,
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["Users", "InvestorAnalytics"],
+    }),
+    reviewInvestorApprovalByAdmin: builder.mutation({
+      query: ({ investorId, ...payload }) => ({
+        url: `/api/v1/users/investors/${investorId}/approval`,
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["Users", "InvestorAnalytics"],
+    }),
+    getInvestorDocuments: builder.query({
+      query: (investorId) => `/api/v1/users/investors/${investorId}/documents`,
+      providesTags: ["InvestorDocuments"],
+    }),
+    uploadInvestorDocumentByAdmin: builder.mutation({
+      query: ({ investorId, formData }) => ({
+        url: `/api/v1/users/investors/${investorId}/documents`,
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["InvestorDocuments", "InvestorAnalytics"],
+    }),
+    submitMyProfileForApproval: builder.mutation({
+      query: (payload = {}) => ({
+        url: "/api/v1/users/me/profile/submit",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["Users"],
+    }),
+    getMyDocuments: builder.query({
+      query: () => "/api/v1/users/me/documents",
+      providesTags: ["InvestorDocuments"],
+    }),
+    uploadMyDocument: builder.mutation({
+      query: (formData) => ({
+        url: "/api/v1/users/me/documents",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["InvestorDocuments", "Users"],
     }),
     getAssets: builder.query({
       query: () => "/api/v1/assets",
@@ -275,8 +363,20 @@ export const {
   useResendOtpMutation,
   useRefreshTokenMutation,
   useGetMeQuery,
+  useUpdateMeMutation,
+  useGetMyInvestorDashboardSnapshotQuery,
+  useGetMyTransactionsQuery,
   useGetUsersQuery,
   useCreateInvestorByAdminMutation,
+  useGetInvestorDetailsQuery,
+  useUpdateInvestorByAdminMutation,
+  useUpdateInvestorStatusByAdminMutation,
+  useReviewInvestorApprovalByAdminMutation,
+  useGetInvestorDocumentsQuery,
+  useUploadInvestorDocumentByAdminMutation,
+  useSubmitMyProfileForApprovalMutation,
+  useGetMyDocumentsQuery,
+  useUploadMyDocumentMutation,
   useGetAssetsQuery,
   useCreateAssetMutation,
   useGetShareAccountsByAssetQuery,

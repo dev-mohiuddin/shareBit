@@ -1,41 +1,58 @@
 import { motion } from "framer-motion";
 import {
+  Activity,
   BarChart3,
-  CreditCard,
-  PieChart,
-  ShieldCheck,
+  Building2,
+  CalendarDays,
   TrendingUp,
-  DollarSign
+  Wallet,
 } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useGetWalletQuery, useGetAssetsQuery, useGetMyShareAccountsQuery } from "@/features/api/apiSlice";
+import {
+  useGetAssetsQuery,
+  useGetMyInvestorDashboardSnapshotQuery,
+  useGetMyShareAccountsQuery,
+} from "@/features/api/apiSlice";
 import { Link } from "react-router-dom";
 
-const profitData = [
-  { month: "Jan", value: 420 },
-  { month: "Feb", value: 580 },
-  { month: "Mar", value: 760 },
-  { month: "Apr", value: 820 },
-  { month: "May", value: 960 },
-  { month: "Jun", value: 1120 },
-];
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const toMonthLabel = (monthKey) => {
+  if (!monthKey) return "-";
+  const [year, month] = String(monthKey).split("-");
+  if (!year || !month) return monthKey;
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "short" });
+};
 
 export const UserDashboardPage = () => {
-  const { data: walletResponse, isLoading: walletLoading } = useGetWalletQuery();
+  const { data: snapshotResponse, isLoading: snapshotLoading } = useGetMyInvestorDashboardSnapshotQuery();
   const { data: assetsResponse } = useGetAssetsQuery();
   const { data: sharesResponse } = useGetMyShareAccountsQuery();
-  const walletBalance = walletResponse?.data?.balance ?? 0;
+  const snapshot = snapshotResponse?.data || {};
+  const walletBalance = snapshot?.wallet?.balance ?? 0;
   const assets = assetsResponse?.data || [];
   const shareAccounts = sharesResponse?.data || [];
 
   const activeShares = shareAccounts.filter((share) => share.status === "active").length;
   const totalShares = shareAccounts.length;
   const progress = totalShares ? Math.round((activeShares / totalShares) * 100) : 0;
-  
-  const totalInvested = shareAccounts.reduce((sum, share) => sum + (share.paidAmount || 0), 0);
+
+  const monthlyTrend = (snapshot?.monthlyTrend || []).map((row) => ({
+    month: toMonthLabel(row.monthKey),
+    amount: Number(row.amount || 0),
+  }));
+
+  const assetBreakdown = snapshot?.assetBreakdown || [];
+  const cards = snapshot?.cards || {};
 
   return (
     <div className="space-y-6 pb-6">
@@ -46,13 +63,13 @@ export const UserDashboardPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-3xl font-semibold">
-              {walletLoading ? "Loading..." : `$${walletBalance}`}
+              {snapshotLoading ? "Loading..." : formatCurrency(walletBalance)}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" className="w-full" asChild>
                 <Link to="/withdrawals">Withdraw</Link>
               </Button>
-              <Button variant="outline" className="w-full text-white border-white/30" asChild>
+              <Button variant="secondary" className="w-full" asChild>
                 <Link to="/wallet">Deposit</Link>
               </Button>
             </div>
@@ -60,15 +77,37 @@ export const UserDashboardPage = () => {
         </Card>
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "Total Invested", value: `$${totalInvested}`, icon: <DollarSign className="h-4 w-4" /> },
-          { label: "Total Profit", value: "$1,120", icon: <TrendingUp className="h-4 w-4" /> },
-          { label: "Active Shares", value: activeShares, icon: <PieChart className="h-4 w-4" /> },
+          {
+            label: "Gross (Asset Total)",
+            value: formatCurrency(cards.grossAssetTotal),
+            icon: <BarChart3 className="h-4 w-4" />,
+          },
+          {
+            label: "Expense (Asset Total)",
+            value: formatCurrency(cards.expenseAssetTotal),
+            icon: <Activity className="h-4 w-4" />,
+          },
+          {
+            label: "Net (Asset Total)",
+            value: formatCurrency(cards.netAssetTotal),
+            icon: <Wallet className="h-4 w-4" />,
+          },
+          {
+            label: "Your Monthly Profit",
+            value: formatCurrency(cards.investorMonthlyShare),
+            icon: <CalendarDays className="h-4 w-4" />,
+          },
+          {
+            label: "Your Lifetime Profit",
+            value: formatCurrency(cards.investorLifetimeShare),
+            icon: <TrendingUp className="h-4 w-4" />,
+          },
         ].map((item) => (
           <Card key={item.label}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 {item.icon}
                 {item.label}
               </CardTitle>
@@ -90,15 +129,15 @@ export const UserDashboardPage = () => {
           <Progress value={progress} />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{progress}% portfolio active</span>
-            <span>Next payout in 24 hours</span>
+            <span>{formatCurrency(cards.investorMonthlyShare)} earned this month</span>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={profitData}>
+              <LineChart data={monthlyTrend}>
                 <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
                 <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={3} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -107,7 +146,40 @@ export const UserDashboardPage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Active Assets Summary</CardTitle>
+          <CardTitle>Asset-Wise Earnings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {assetBreakdown.slice(0, 6).map((asset) => (
+            <div key={asset.assetId} className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <div className="font-medium">{asset.assetName}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> {asset.category || "Asset"} • Ownership {asset.ownershipPercentage}%
+                </div>
+              </div>
+              <div className="text-right text-xs">
+                <p>Daily: {formatCurrency(asset.dailyEarning)}</p>
+                <p>Monthly: {formatCurrency(asset.monthlyEarning)}</p>
+                <p>Lifetime: {formatCurrency(asset.lifetimeEarning)}</p>
+              </div>
+            </div>
+          ))}
+          {assetBreakdown.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              No asset-wise earnings found yet. Start investing from marketplace.
+              <div className="mt-2">
+                <Button size="sm" asChild>
+                  <Link to="/marketplace">Explore Marketplace</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Assets</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {assets.slice(0, 3).map((asset) => (
@@ -119,7 +191,7 @@ export const UserDashboardPage = () => {
                 </div>
               </div>
               <Button size="sm" asChild>
-                 <Link to="/marketplace">Invest</Link>
+                <Link to="/marketplace">Invest</Link>
               </Button>
             </div>
           ))}

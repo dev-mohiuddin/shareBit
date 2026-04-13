@@ -4,6 +4,15 @@ import {
   getUserById,
   updateUser,
   createInvestorByAdmin as createInvestorByAdminService,
+  getInvestorByIdForAdmin,
+  updateInvestorByAdmin,
+  updateInvestorStatusByAdmin,
+  reviewInvestorApprovalByAdmin,
+  submitInvestorProfileForApproval,
+  uploadInvestorDocument,
+  listInvestorDocuments,
+  getInvestorDashboardByUserId,
+  listMyTransactions,
 } from "#services/user/userService.js";
 
 export const getMe = catchAsync(async (req, res) => {
@@ -29,4 +38,96 @@ export const createInvestorByAdmin = catchAsync(async (req, res) => {
     message: "Investor account created successfully",
     statusCode: 201,
   });
+});
+
+export const submitMyProfileForApproval = catchAsync(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const updated = await submitInvestorProfileForApproval(userId, req.body, req.user);
+  res.success({
+    data: updated,
+    message: "Profile submitted for admin approval",
+    statusCode: 200,
+  });
+});
+
+export const uploadMyDocument = catchAsync(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const doc = await uploadInvestorDocument({
+    targetUserId: userId,
+    docType: req.body.docType,
+    docNumber: req.body.docNumber,
+    category: req.body.category,
+    file: req.file,
+    actor: req.user,
+  });
+
+  res.success({
+    data: doc,
+    message: "Document uploaded successfully",
+    statusCode: 201,
+  });
+});
+
+export const listMyDocuments = catchAsync(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const docs = await listInvestorDocuments(userId);
+  res.success({ data: docs, message: "Documents retrieved" });
+});
+
+export const getMyInvestorDashboard = catchAsync(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const dashboard = await getInvestorDashboardByUserId(userId);
+  res.success({ data: dashboard, message: "Investor dashboard snapshot" });
+});
+
+export const listMyTransactionsController = catchAsync(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const result = await listMyTransactions(userId, req.query || {});
+  res.success({ data: result, message: "Wallet transactions retrieved" });
+});
+
+export const getInvestorAdminDetails = catchAsync(async (req, res) => {
+  const details = await getInvestorByIdForAdmin(req.params.investorId);
+  res.success({ data: details, message: "Investor details retrieved" });
+});
+
+export const updateInvestorAdmin = catchAsync(async (req, res) => {
+  const updated = await updateInvestorByAdmin(req.params.investorId, req.body, req.user);
+  res.success({ data: updated, message: "Investor profile updated" });
+});
+
+export const updateInvestorAdminStatus = catchAsync(async (req, res) => {
+  const updated = await updateInvestorStatusByAdmin(req.params.investorId, req.body, req.user);
+  res.success({ data: updated, message: "Investor status updated" });
+});
+
+export const reviewInvestorAdminApproval = catchAsync(async (req, res) => {
+  const updated = await reviewInvestorApprovalByAdmin(
+    req.params.investorId,
+    req.body,
+    req.user
+  );
+  res.success({ data: updated, message: "Investor approval decision saved" });
+});
+
+export const uploadInvestorDocumentByAdmin = catchAsync(async (req, res) => {
+  const doc = await uploadInvestorDocument({
+    targetUserId: req.params.investorId,
+    docType: req.body.docType,
+    docNumber: req.body.docNumber,
+    category: req.body.category,
+    file: req.file,
+    actor: req.user,
+  });
+
+  res.success({
+    data: doc,
+    message: "Investor document uploaded",
+    statusCode: 201,
+  });
+});
+
+export const listInvestorAdminDocuments = catchAsync(async (req, res) => {
+  const docs = await listInvestorDocuments(req.params.investorId);
+  res.success({ data: docs, message: "Investor documents retrieved" });
 });

@@ -15,6 +15,7 @@ const ROUTES = {
   ADMIN_PAYMENTS: "/admin/payments",
   ADMIN_PROFIT: "/admin/profit",
   ADMIN_INVESTORS: "/admin/investors",
+  ADMIN_INVESTOR_DETAILS: "/admin/investors/:investorId",
   ADMIN_WITHDRAWALS: "/admin/withdrawals",
   ADMIN_AUDIT: "/admin/audit",
   ADMIN_PENDING_APPROVALS: "/admin/users/pending",

@@ -38,5 +38,6 @@ const transactionSchema = new mongoose.Schema(
 );
 
 transactionSchema.index({ walletId: 1, occurredAt: 1 });
+transactionSchema.index({ walletId: 1, type: 1, occurredAt: -1 });
 
 export const Transaction = mongoose.model("Transaction", transactionSchema);

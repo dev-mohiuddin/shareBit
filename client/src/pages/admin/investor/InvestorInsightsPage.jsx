@@ -2,7 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Activity, BarChart3, Loader2, Plus, RefreshCcw, Users, Wallet } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Eye,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   useCreateInvestorByAdminMutation,
@@ -10,17 +21,26 @@ import {
   useGetUsersQuery,
   useGetShareAccountsByAssetQuery,
   useLazyGetSharePaymentsQuery,
+  useUpdateInvestorByAdminMutation,
 } from "@/features/api/apiSlice";
 import { useAppSelector } from "@/app/hooks";
+import { ConfirmationDialog } from "@/components/dialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import {
   formatCurrency,
   formatDate,
@@ -34,6 +54,13 @@ const createInvestorSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Valid email is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  phone: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
+});
+
+const editInvestorSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   phone: z.string().optional().or(z.literal("")),
   country: z.string().optional().or(z.literal("")),
 });
@@ -60,10 +87,15 @@ const getRoleName = (user) => user?.roleName || user?.roleId?.name || "";
 
 export const InvestorInsightsPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const authUser = useAppSelector((state) => state.auth.user);
   const canCreateInvestor = useMemo(() => {
     const permissions = authUser?.permissions || [];
-    return permissions.includes("*") || permissions.includes("platform.user:create");
+    return (
+      permissions.includes("*") ||
+      permissions.includes("platform.user:create") ||
+      permissions.includes("user:create")
+    );
   }, [authUser?.permissions]);
 
   const { data: assetsResponse } = useGetAssetsQuery();
@@ -74,11 +106,19 @@ export const InvestorInsightsPage = () => {
   } = useGetUsersQuery();
   const [createInvestorByAdmin, { isLoading: isCreatingInvestor }] =
     useCreateInvestorByAdminMutation();
+  const [updateInvestorByAdmin, { isLoading: isUpdatingInvestor }] =
+    useUpdateInvestorByAdminMutation();
 
   const assets = useMemo(() => assetsResponse?.data || [], [assetsResponse?.data]);
   const users = useMemo(() => usersResponse?.data || [], [usersResponse?.data]);
 
   const [isCreateInvestorDialogOpen, setIsCreateInvestorDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingInvestor, setEditingInvestor] = useState(null);
+  const [isCreateConfirmOpen, setIsCreateConfirmOpen] = useState(false);
+  const [isEditConfirmOpen, setIsEditConfirmOpen] = useState(false);
+  const [pendingCreateValues, setPendingCreateValues] = useState(null);
+  const [pendingEditValues, setPendingEditValues] = useState(null);
 
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [paymentMap, setPaymentMap] = useState({});
@@ -97,6 +137,16 @@ export const InvestorInsightsPage = () => {
     },
   });
 
+  const editInvestorForm = useForm({
+    resolver: zodResolver(editInvestorSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      country: "",
+    },
+  });
+
   const investorAccounts = useMemo(
     () =>
       users
@@ -105,7 +155,10 @@ export const InvestorInsightsPage = () => {
           return roleName.includes("investor") || roleName.includes("user");
         })
         .map((user) => ({
+          approvalStatus: user.investorProfile?.approval?.status || null,
           id: user._id || user.id,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
           name:
             `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
             user.name ||
@@ -114,11 +167,34 @@ export const InvestorInsightsPage = () => {
           phone: user.phone || "-",
           country: user.country || "-",
           roleName: getRoleName(user) || "Investor",
-          status: user.isActive ? (user.isVerified ? "active" : "pending") : "inactive",
+          status:
+            user.investorStatus ||
+            (user.investorProfile?.approval?.status === "on-hold"
+              ? "on-hold"
+              : user.investorProfile?.approval?.status === "rejected"
+                ? "rejected"
+                : user.investorProfile?.approval?.status === "submitted"
+                  ? "pending-approval"
+                  : user.isActive
+                    ? user.isVerified
+                      ? "active"
+                      : "pending"
+                    : "inactive"),
           joinedAt: user.createdAt,
         })),
     [users]
   );
+
+  const openEditDialog = (investor) => {
+    setEditingInvestor(investor);
+    editInvestorForm.reset({
+      firstName: investor.firstName || "",
+      lastName: investor.lastName || "",
+      phone: investor.phone === "-" ? "" : investor.phone || "",
+      country: investor.country === "-" ? "" : investor.country || "",
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const handleCreateInvestor = async (values) => {
     try {
@@ -138,6 +214,8 @@ export const InvestorInsightsPage = () => {
 
       createInvestorForm.reset();
       setIsCreateInvestorDialogOpen(false);
+      setIsCreateConfirmOpen(false);
+      setPendingCreateValues(null);
       refetchUsers();
     } catch (error) {
       toast({
@@ -146,6 +224,56 @@ export const InvestorInsightsPage = () => {
         description: error?.data?.message || "Could not create investor account.",
       });
     }
+  };
+
+  const handleEditInvestor = async (values) => {
+    if (!editingInvestor?.id) return;
+
+    try {
+      await updateInvestorByAdmin({
+        investorId: editingInvestor.id,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        phone: values.phone?.trim() || "",
+        country: values.country?.trim() || "",
+      }).unwrap();
+
+      toast({
+        title: "Investor updated",
+        description: "Investor profile information has been updated.",
+      });
+      setIsEditDialogOpen(false);
+      setIsEditConfirmOpen(false);
+      setPendingEditValues(null);
+      setEditingInvestor(null);
+      refetchUsers();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error?.data?.message || "Could not update investor profile.",
+      });
+    }
+  };
+
+  const openCreateConfirm = (values) => {
+    setPendingCreateValues(values);
+    setIsCreateConfirmOpen(true);
+  };
+
+  const openEditConfirm = (values) => {
+    setPendingEditValues(values);
+    setIsEditConfirmOpen(true);
+  };
+
+  const confirmCreateInvestor = async () => {
+    if (!pendingCreateValues) return;
+    await handleCreateInvestor(pendingCreateValues);
+  };
+
+  const confirmEditInvestor = async () => {
+    if (!pendingEditValues) return;
+    await handleEditInvestor(pendingEditValues);
   };
 
   const activeAssetId = selectedAssetId || assets[0]?._id || "";
@@ -334,7 +462,7 @@ export const InvestorInsightsPage = () => {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Investors</CardTitle>
+            <CardTitle className="text-sm">Investors</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between text-2xl font-semibold">
             {summary.investorCount}
@@ -343,7 +471,7 @@ export const InvestorInsightsPage = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Paid</CardTitle>
+            <CardTitle className="text-sm">Total Paid</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between text-2xl font-semibold">
             {formatCurrency(summary.totalPaid)}
@@ -352,7 +480,7 @@ export const InvestorInsightsPage = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Contract Value</CardTitle>
+            <CardTitle className="text-sm">Contract Value</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between text-2xl font-semibold">
             {formatCurrency(summary.totalContract)}
@@ -361,7 +489,7 @@ export const InvestorInsightsPage = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Avg Ownership</CardTitle>
+            <CardTitle className="text-sm">Avg Ownership</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between text-2xl font-semibold">
             {summary.avgOwnership}%
@@ -395,7 +523,7 @@ export const InvestorInsightsPage = () => {
               </DialogHeader>
 
               <form
-                onSubmit={createInvestorForm.handleSubmit(handleCreateInvestor)}
+                onSubmit={createInvestorForm.handleSubmit(openCreateConfirm)}
                 className="space-y-4 py-2"
               >
                 <div className="grid grid-cols-2 gap-4">
@@ -468,6 +596,61 @@ export const InvestorInsightsPage = () => {
               </form>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Investor Profile</DialogTitle>
+                <DialogDescription>
+                  Update basic investor information from the action menu.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                onSubmit={editInvestorForm.handleSubmit(openEditConfirm)}
+                className="space-y-4 py-2"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-firstName">First Name</Label>
+                    <Input id="edit-firstName" {...editInvestorForm.register("firstName")} />
+                    {editInvestorForm.formState.errors.firstName && (
+                      <p className="text-xs text-red-500">
+                        {editInvestorForm.formState.errors.firstName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-lastName">Last Name</Label>
+                    <Input id="edit-lastName" {...editInvestorForm.register("lastName")} />
+                    {editInvestorForm.formState.errors.lastName && (
+                      <p className="text-xs text-red-500">
+                        {editInvestorForm.formState.errors.lastName.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input id="edit-phone" {...editInvestorForm.register("phone")} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-country">Country</Label>
+                    <Input id="edit-country" {...editInvestorForm.register("country")} />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isUpdatingInvestor}>
+                    {isUpdatingInvestor && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border">
@@ -481,6 +664,7 @@ export const InvestorInsightsPage = () => {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -492,17 +676,42 @@ export const InvestorInsightsPage = () => {
                     <TableCell>{investor.country}</TableCell>
                     <TableCell>{investor.roleName}</TableCell>
                     <TableCell>
-                      <Badge variant={investor.status === "active" ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          investor.status === "active"
+                            ? "default"
+                            : investor.status === "inactive" || investor.status === "rejected"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
                         {investor.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{formatDate(investor.joinedAt, "-")}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/investors/${investor.id}`)}>
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditDialog(investor)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit Profile
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 ))}
 
                 {investorAccounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-20 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="h-20 text-center text-sm text-muted-foreground">
                       {isFetchingUsers ? (
                         <span className="inline-flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" /> Loading investors...
@@ -709,6 +918,26 @@ export const InvestorInsightsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        open={isCreateConfirmOpen}
+        onOpenChange={setIsCreateConfirmOpen}
+        title="Create investor account?"
+        description="The new investor will be verified instantly and can login right away."
+        confirmLabel="Create Investor"
+        isLoading={isCreatingInvestor}
+        onConfirm={confirmCreateInvestor}
+      />
+
+      <ConfirmationDialog
+        open={isEditConfirmOpen}
+        onOpenChange={setIsEditConfirmOpen}
+        title="Save investor profile changes?"
+        description="This will update basic investor information."
+        confirmLabel="Save Changes"
+        isLoading={isUpdatingInvestor}
+        onConfirm={confirmEditInvestor}
+      />
     </div>
   );
 };

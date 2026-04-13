@@ -13,8 +13,15 @@ import { apiRouterV1 } from "#routes/v1/index.js";
 import healthRouter from "#routes/v1/health/healthRoute.js";
 import { setupSwagger } from "#config/swagger.js";
 import { startDailyProfitJob } from "#jobs/dailyProfitJob.js";
+import { configureCloudinary } from "#utils/cloudinaryUtil.js";
 
 dotenv.config();
+try {
+  configureCloudinary();
+} catch (error) {
+  console.error("Cloudinary configuration error:", error.message);
+  process.exit(1);
+}
 const PORT = process.env.PORT || 8000;
 
 app.use(express.json({ limit: "2mb" }));

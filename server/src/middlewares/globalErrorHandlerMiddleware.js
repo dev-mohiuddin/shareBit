@@ -5,7 +5,7 @@ import { logger } from "#utils/logger.js";
 export const globalErrorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || "Internal Server Error";
-  let data = null;
+  let data = err.data || null;
 
   if (err instanceof ZodError) {
     statusCode = 400;

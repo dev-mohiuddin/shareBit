@@ -31,6 +31,7 @@ const DEMO_USER_EMAIL = getEnv("DEMO_USER_EMAIL") || "user@sharebit.com";
 const DEMO_USER_PASSWORD = getEnv("DEMO_USER_PASSWORD") || "User@12345";
 
 const ALL_PERMISSIONS = [
+  "*",
   "role:create",
   "role:read",
   "role:update",
@@ -94,6 +95,16 @@ const ROLE_DEFINITIONS = [
       "withdrawal:approve",
       "withdrawal:reject",
       "audit:read",
+      "platform.user:create",
+      "platform.user:read",
+      "platform.user:update",
+      "platform.asset:create",
+      "platform.asset:read",
+      "platform.asset:update",
+      "platform.wallet:read",
+      "platform.wallet:manage",
+      "platform.audit:read",
+      "platform.audit:export",
     ],
     hierarchy: 2,
     isDefault: false,
