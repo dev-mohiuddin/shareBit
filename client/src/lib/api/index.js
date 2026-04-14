@@ -83,6 +83,24 @@ export const handleRequest = async (requestFn) => {
     const response = await requestFn();
     return response?.data;
   } catch (error) {
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    if (isOffline) {
+      return {
+        success: false,
+        statusCode: 0,
+        message: "You are offline. Reconnect and try again.",
+      };
+    }
+
+    if (error?.code === "ERR_NETWORK") {
+      return {
+        success: false,
+        statusCode: 0,
+        message: "Network is unavailable. Please try again.",
+      };
+    }
+
     const status = error?.response?.status;
     const data = error?.response?.data;
 

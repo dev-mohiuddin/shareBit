@@ -1,8 +1,12 @@
 import dotenv from "dotenv";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cookieParser from "cookie-parser";
 import { app, server } from "#socket/server.js";
 import { connectDatabase } from "#config/dbConnect.js";
+import { getAllowedOrigins } from "#config/corsConfig.js";
 import { attachRequestId, globalResponse } from "#utils/responseUtil.js";
 import { globalErrorHandler } from "#middlewares/globalErrorHandlerMiddleware.js";
 import { securityMiddleware } from "#middlewares/securityMiddleware.js";
@@ -23,6 +27,11 @@ try {
   process.exit(1);
 }
 const PORT = process.env.PORT || 8000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, "../client/dist");
+const shouldServeClientDist = process.env.SERVE_CLIENT_DIST === "true";
+const canServeClientDist = shouldServeClientDist && existsSync(clientDistPath);
 
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
@@ -34,11 +43,26 @@ app.use(globalRateLimiter(1000, 15));
 
 setupSwagger(app);
 
+if (shouldServeClientDist && !canServeClientDist) {
+  console.warn(`Client dist not found at ${clientDistPath}. SPA fallback is disabled.`);
+}
+
+if (canServeClientDist) {
+  app.use(express.static(clientDistPath));
+}
+
 app.use("/api", apiRouterV1);
-app.get("/", (req, res) => {
-  res.send("ShareBit server is running...");
-});
 app.use("/api/health", healthRouter);
+
+if (canServeClientDist) {
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+} else {
+  app.get("/", (req, res) => {
+    res.send("ShareBit server is running...");
+  });
+}
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
@@ -54,7 +78,13 @@ const startServer = async () => {
   startDailyProfitJob();
 
   const response = server.listen(PORT, () => {
+    const origins = getAllowedOrigins();
+    const originLabel = origins.length ? origins.join(", ") : "dynamic/all origins (default)";
     console.log(`Server running on port ${PORT}`);
+    console.log(`CORS origin mode: ${originLabel}`);
+    if (canServeClientDist) {
+      console.log(`Serving client dist from ${clientDistPath}`);
+    }
   });
 
   process.on("unhandledRejection", (err) => {

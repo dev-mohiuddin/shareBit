@@ -2,6 +2,7 @@ import helmet from "helmet";
 import cors from "cors";
 import hpp from "hpp";
 import xss from "xss";
+import { getCorsOrigin } from "#config/corsConfig.js";
 const sanitizeNoSql = (obj) => {
   if (!obj || typeof obj !== "object") return;
 
@@ -43,9 +44,11 @@ const noSqlInjectionMiddleware = (req, res, next) => {
   next();
 };
 
+const corsOrigin = getCorsOrigin();
+
 export const securityMiddleware = [
   helmet(),
-  cors({ origin: true, credentials: true }),
+  cors({ origin: corsOrigin, credentials: true }),
   hpp(),
   noSqlInjectionMiddleware,
   xssMiddleware,

@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, WifiOff } from "lucide-react";
 import { ConfirmationDialog } from "@/components/dialogs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useGetDepositsQuery, useRequestDepositMutation } from "@/features/api/apiSlice";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useToast } from "@/hooks/use-toast";
 
 const statusVariantMap = {
@@ -39,6 +41,7 @@ const resolveFeedback = (item) => {
 
 export const DepositsPage = () => {
   const { toast } = useToast();
+  const isOnline = useNetworkStatus();
   const { data, isLoading, isFetching, refetch } = useGetDepositsQuery();
   const [requestDeposit, { isLoading: isSubmitting }] = useRequestDepositMutation();
 
@@ -55,6 +58,16 @@ export const DepositsPage = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
     setErrorText("");
+
+    if (!isOnline) {
+      setErrorText("You are offline. Reconnect to submit a deposit request.");
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Deposit submission is unavailable until your connection returns.",
+      });
+      return;
+    }
 
     const parsedAmount = Number(amount);
     if (!parsedAmount || parsedAmount <= 0) {
@@ -83,6 +96,16 @@ export const DepositsPage = () => {
 
   const handleConfirmSubmit = async () => {
     if (!pendingRequest) return;
+
+    if (!isOnline) {
+      setErrorText("You are offline. Reconnect to submit a deposit request.");
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Deposit submission is unavailable until your connection returns.",
+      });
+      return;
+    }
 
     const formData = new FormData();
     formData.append("amount", String(pendingRequest.amount));
@@ -130,6 +153,16 @@ export const DepositsPage = () => {
           <CardDescription>Provide transaction ID and screenshot proof to submit a request.</CardDescription>
         </CardHeader>
         <CardContent>
+          {!isOnline ? (
+            <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-700">
+              <WifiOff className="h-4 w-4" />
+              <AlertTitle>You are offline</AlertTitle>
+              <AlertDescription>
+                Deposit request submission is disabled until internet connection is restored.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="deposit-amount">Amount</Label>
@@ -141,12 +174,13 @@ export const DepositsPage = () => {
                 placeholder="100"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="deposit-method">Method</Label>
-              <Select value={method} onValueChange={setMethod}>
+              <Select value={method} onValueChange={setMethod} disabled={!isOnline || isSubmitting}>
                 <SelectTrigger id="deposit-method">
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
@@ -164,6 +198,7 @@ export const DepositsPage = () => {
                 placeholder="TRX-123456"
                 value={transactionId}
                 onChange={(event) => setTransactionId(event.target.value)}
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
@@ -174,6 +209,7 @@ export const DepositsPage = () => {
                 type="file"
                 accept="image/*"
                 onChange={(event) => setScreenshotFile(event.target.files?.[0] || null)}
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
@@ -185,15 +221,20 @@ export const DepositsPage = () => {
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 className="min-h-[70px]"
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
             {errorText ? <p className="text-sm text-destructive md:col-span-2">{errorText}</p> : null}
 
-            <Button type="submit" className="md:col-span-2" disabled={isSubmitting}>
+            <Button type="submit" className="md:col-span-2" disabled={isSubmitting || !isOnline}>
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                </span>
+              ) : !isOnline ? (
+                <span className="inline-flex items-center gap-2">
+                  <WifiOff className="h-4 w-4" /> Offline
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-2">

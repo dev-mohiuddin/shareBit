@@ -1,12 +1,15 @@
 import http from "http";
 import express from "express";
 import { Server } from "socket.io";
+import { getCorsOrigin } from "#config/corsConfig.js";
 
 export const app = express();
 export const server = http.createServer(app);
 
+const corsOrigin = getCorsOrigin();
+
 export const io = new Server(server, {
-	cors: { origin: true, credentials: true },
+	cors: { origin: corsOrigin, credentials: true },
 });
 
 const userSocketMap = new Map();

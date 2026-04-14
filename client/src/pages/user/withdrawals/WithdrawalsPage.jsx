@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, WifiOff } from "lucide-react";
 import { ConfirmationDialog } from "@/components/dialogs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   useGetWithdrawalsQuery,
   useRequestWithdrawalMutation,
 } from "@/features/api/apiSlice";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useToast } from "@/hooks/use-toast";
 
 const statusVariantMap = {
@@ -45,6 +47,7 @@ const resolveFeedback = (item) => {
 
 export const WithdrawalsPage = () => {
   const { toast } = useToast();
+  const isOnline = useNetworkStatus();
   const { data, isLoading, isFetching, refetch } = useGetWithdrawalsQuery();
   const { data: meResponse } = useGetMeQuery();
   const [requestWithdrawal, { isLoading: isSubmitting }] = useRequestWithdrawalMutation();
@@ -85,6 +88,16 @@ export const WithdrawalsPage = () => {
     event.preventDefault();
     setErrorText("");
 
+    if (!isOnline) {
+      setErrorText("You are offline. Reconnect to submit a withdrawal request.");
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Withdrawal requests are unavailable until your connection returns.",
+      });
+      return;
+    }
+
     const parsedAmount = Number(amount);
     if (!parsedAmount || parsedAmount <= 0) {
       setErrorText("Please enter a valid withdrawal amount.");
@@ -105,6 +118,16 @@ export const WithdrawalsPage = () => {
 
   const handleConfirmSubmit = async () => {
     if (!pendingRequest) return;
+
+    if (!isOnline) {
+      setErrorText("You are offline. Reconnect to submit a withdrawal request.");
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Withdrawal requests are unavailable until your connection returns.",
+      });
+      return;
+    }
 
     try {
       await requestWithdrawal({
@@ -134,6 +157,15 @@ export const WithdrawalsPage = () => {
 
   const handleConfirmCancel = async () => {
     if (!pendingCancelRequest?._id) return;
+
+    if (!isOnline) {
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Reconnect before cancelling withdrawal requests.",
+      });
+      return;
+    }
 
     try {
       await cancelMyWithdrawal({ withdrawalId: pendingCancelRequest._id }).unwrap();
@@ -168,6 +200,16 @@ export const WithdrawalsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!isOnline ? (
+            <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-700">
+              <WifiOff className="h-4 w-4" />
+              <AlertTitle>You are offline</AlertTitle>
+              <AlertDescription>
+                Withdrawal submit and cancel actions are disabled until internet connection is restored.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="withdraw-amount">Amount</Label>
@@ -179,12 +221,17 @@ export const WithdrawalsPage = () => {
                 placeholder="100"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="withdraw-method">Method</Label>
-              <Select value={method} onValueChange={setMethod} disabled={!enabledMethods.length}>
+              <Select
+                value={method}
+                onValueChange={setMethod}
+                disabled={!enabledMethods.length || !isOnline || isSubmitting}
+              >
                 <SelectTrigger id="withdraw-method">
                   <SelectValue placeholder="Select payout method" />
                 </SelectTrigger>
@@ -206,6 +253,7 @@ export const WithdrawalsPage = () => {
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 className="min-h-[40px]"
+                disabled={!isOnline || isSubmitting}
               />
             </div>
 
@@ -217,10 +265,18 @@ export const WithdrawalsPage = () => {
 
             {errorText ? <p className="text-sm text-red-600 md:col-span-3">{errorText}</p> : null}
 
-            <Button type="submit" className="md:col-span-3" disabled={isSubmitting || !enabledMethods.length}>
+            <Button
+              type="submit"
+              className="md:col-span-3"
+              disabled={isSubmitting || !enabledMethods.length || !isOnline}
+            >
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                </span>
+              ) : !isOnline ? (
+                <span className="inline-flex items-center gap-2">
+                  <WifiOff className="h-4 w-4" /> Offline
                 </span>
               ) : (
                 "Submit Request"
@@ -267,7 +323,7 @@ export const WithdrawalsPage = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={isCancelling}
+                            disabled={isCancelling || !isOnline}
                             onClick={() => setPendingCancelRequest(item)}
                           >
                             Cancel
@@ -330,7 +386,7 @@ export const WithdrawalsPage = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={isCancelling}
+                                disabled={isCancelling || !isOnline}
                                 onClick={() => setPendingCancelRequest(item)}
                               >
                                 Cancel Request

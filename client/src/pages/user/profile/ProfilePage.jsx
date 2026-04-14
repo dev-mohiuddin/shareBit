@@ -11,8 +11,10 @@ import {
   Sun,
   Upload,
   UserRound,
+  WifiOff,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/dialogs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +31,7 @@ import {
   useUploadMyDocumentMutation,
 } from "@/features/api/apiSlice";
 import { logout } from "@/features/auth/authSlice";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/context/ThemeProvider";
 
@@ -45,6 +48,7 @@ export const ProfilePage = () => {
   const authUser = useAppSelector((state) => state.auth.user) || {};
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const isOnline = useNetworkStatus();
   const [confirmAction, setConfirmAction] = useState(null);
 
   const { data: meResponse, isFetching: isFetchingProfile, refetch: refetchProfile } = useGetMeQuery();
@@ -215,6 +219,16 @@ export const ProfilePage = () => {
   };
 
   const openActionConfirmation = (action) => {
+    const requiresNetwork = ["save-payout", "upload-document", "submit-approval"];
+    if (!isOnline && requiresNetwork.includes(action)) {
+      toast({
+        variant: "destructive",
+        title: "Offline mode",
+        description: "Reconnect before submitting profile, payout, or document updates.",
+      });
+      return;
+    }
+
     if (action === "upload-document" && !docFile) {
       toast({
         variant: "destructive",
@@ -311,6 +325,16 @@ export const ProfilePage = () => {
           <Badge variant={resolveBadge(approvalStatus)}>{approvalStatus}</Badge>
         </CardContent>
       </Card>
+
+      {!isOnline ? (
+        <Alert className="border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-700">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle>You are offline</AlertTitle>
+          <AlertDescription>
+            Profile write actions are paused. You can review data now and submit changes after reconnecting.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-border/70">
@@ -476,7 +500,7 @@ export const ProfilePage = () => {
                   onChange={(event) => setDocFile(event.target.files?.[0] || null)}
                 />
               </div>
-              <Button type="submit" disabled={isUploadingDoc || !docFile}>
+              <Button type="submit" disabled={isUploadingDoc || !docFile || !isOnline}>
                 {isUploadingDoc ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -520,7 +544,7 @@ export const ProfilePage = () => {
               <Button
                 type="button"
                 onClick={() => openActionConfirmation("submit-approval")}
-                disabled={isSubmittingForApproval || isFetchingProfile}
+                disabled={isSubmittingForApproval || isFetchingProfile || !isOnline}
               >
                 {isSubmittingForApproval ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -613,7 +637,7 @@ export const ProfilePage = () => {
               type="button"
               variant="outline"
               onClick={() => openActionConfirmation("save-payout")}
-              disabled={isSavingPayout}
+              disabled={isSavingPayout || !isOnline}
             >
               {isSavingPayout && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Banking Details
