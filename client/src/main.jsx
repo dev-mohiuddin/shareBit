@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "@/App";
 import { store, persistor } from "@/app/store";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ThemeProvider } from "@/context/ThemeProvider";
 import "@/index.css";
 
 createRoot(document.getElementById("root")).render(
@@ -13,9 +14,11 @@ createRoot(document.getElementById("root")).render(
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <BrowserRouter>
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </ThemeProvider>
         </BrowserRouter>
       </PersistGate>
     </Provider>

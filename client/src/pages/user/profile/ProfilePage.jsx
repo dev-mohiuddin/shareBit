@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building2, CircleCheck, IdCard, Loader2, Send, Upload, UserRound } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Building2,
+  CircleCheck,
+  IdCard,
+  Loader2,
+  LogOut,
+  Moon,
+  Send,
+  Sun,
+  Upload,
+  UserRound,
+} from "lucide-react";
 import { ConfirmationDialog } from "@/components/dialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   useGetMeQuery,
   useGetMyDocumentsQuery,
@@ -16,7 +28,9 @@ import {
   useUpdateMeMutation,
   useUploadMyDocumentMutation,
 } from "@/features/api/apiSlice";
+import { logout } from "@/features/auth/authSlice";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/context/ThemeProvider";
 
 const resolveBadge = (status) => {
   const normalized = String(status || "pending").toLowerCase();
@@ -26,7 +40,10 @@ const resolveBadge = (status) => {
 };
 
 export const ProfilePage = () => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const authUser = useAppSelector((state) => state.auth.user) || {};
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [confirmAction, setConfirmAction] = useState(null);
 
@@ -191,6 +208,12 @@ export const ProfilePage = () => {
     }
   };
 
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login", { replace: true });
+    return true;
+  };
+
   const openActionConfirmation = (action) => {
     if (action === "upload-document" && !docFile) {
       toast({
@@ -227,6 +250,15 @@ export const ProfilePage = () => {
       };
     }
 
+    if (confirmAction === "logout-session") {
+      return {
+        title: "Log out from this session?",
+        description: "You can sign in again anytime from the login page.",
+        confirmLabel: "Log Out",
+        confirmVariant: "destructive",
+      };
+    }
+
     return {
       title: "Submit profile for admin approval?",
       description: "After submission, admin review status will control your financial action access.",
@@ -244,6 +276,8 @@ export const ProfilePage = () => {
       success = await handleUploadDocument();
     } else if (confirmAction === "submit-approval") {
       success = await handleSubmitForApproval();
+    } else if (confirmAction === "logout-session") {
+      success = handleLogout();
     }
 
     if (success) {
@@ -277,6 +311,59 @@ export const ProfilePage = () => {
           <Badge variant={resolveBadge(approvalStatus)}>{approvalStatus}</Badge>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="text-lg">Appearance</CardTitle>
+            <CardDescription>Switch light and dark mode for the full site.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between rounded-md border border-border/60 p-3">
+              <span className="text-sm text-muted-foreground">Current theme</span>
+              <Badge variant="outline" className="capitalize">
+                {theme}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={theme === "light" ? "default" : "outline"}
+                onClick={() => setTheme("light")}
+              >
+                <Sun className="mr-2 h-4 w-4" />
+                Light
+              </Button>
+              <Button
+                type="button"
+                variant={theme === "dark" ? "default" : "outline"}
+                onClick={() => setTheme("dark")}
+              >
+                <Moon className="mr-2 h-4 w-4" />
+                Dark
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="text-lg">Account Actions</CardTitle>
+            <CardDescription>Control your current session and account access.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={() => openActionConfirmation("logout-session")}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="border-border/70 lg:col-span-2">

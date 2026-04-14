@@ -12,11 +12,13 @@ import { MarketplacePage } from "@/pages/user/marketplace/MarketplacePage";
 import { InvestmentsPage } from "@/pages/user/investments/InvestmentsPage";
 import { WalletPage } from "@/pages/user/wallet/WalletPage";
 import { WithdrawalsPage } from "@/pages/user/withdrawals/WithdrawalsPage";
+import { DepositsPage } from "@/pages/user/deposits/DepositsPage";
 import { ProfilePage } from "@/pages/user/profile/ProfilePage";
 import { AdminPanelPage } from "@/pages/admin/dashboard/AdminPanelPage";
 import { AssetManagerPage } from "@/pages/admin/asset/AssetManagerPage";
 import { ShareManagerPage } from "@/pages/admin/share/ShareManagerPage";
 import { SharePaymentPage } from "@/pages/admin/payment/SharePaymentPage";
+import { DepositManagerPage } from "@/pages/admin/deposit/DepositManagerPage";
 import { ProfitManagerPage } from "@/pages/admin/profit/ProfitManagerPage";
 import { InvestorInsightsPage } from "@/pages/admin/investor/InvestorInsightsPage";
 import { InvestorDetailsPage } from "@/pages/admin/investor/InvestorDetailsPage";
@@ -52,6 +54,7 @@ export const AppRoutes = () => {
         { path: ROUTES.INVESTMENTS, element: <InvestmentsPage /> },
         { path: ROUTES.WALLET, element: <WalletPage /> },
         { path: ROUTES.WITHDRAWALS, element: <WithdrawalsPage /> },
+        { path: ROUTES.DEPOSITS, element: <DepositsPage /> },
         { path: ROUTES.PROFILE, element: <ProfilePage /> },
       ],
     },
@@ -66,6 +69,7 @@ export const AppRoutes = () => {
         { path: ROUTES.ADMIN_ASSETS, element: <AssetManagerPage /> },
         { path: ROUTES.ADMIN_SHARES, element: <ShareManagerPage /> },
         { path: ROUTES.ADMIN_PAYMENTS, element: <SharePaymentPage /> },
+        { path: ROUTES.ADMIN_DEPOSITS, element: <DepositManagerPage /> },
         { path: ROUTES.ADMIN_PROFIT, element: <ProfitManagerPage /> },
         { path: ROUTES.ADMIN_INVESTORS, element: <InvestorInsightsPage /> },
         { path: ROUTES.ADMIN_INVESTOR_DETAILS, element: <InvestorDetailsPage /> },

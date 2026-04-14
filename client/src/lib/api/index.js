@@ -1,10 +1,24 @@
 import axios from "axios";
 
-export const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const baseUrl =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000";
+
+let authFailureHandler = null;
+
+export const setAuthFailureHandler = (handler) => {
+  authFailureHandler = typeof handler === "function" ? handler : null;
+};
+
+const notifyAuthFailure = () => {
+  if (authFailureHandler) {
+    authFailureHandler();
+  }
+};
 
 export const API = axios.create({
   baseURL: baseUrl,
-  headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
 
@@ -13,9 +27,15 @@ let refreshPromise = null;
 
 const handleRefresh = async () => {
   if (!refreshPromise) {
-    refreshPromise = API.post("/api/v1/auth/refresh-token").then(() => {
-      refreshPromise = null;
-    });
+    refreshPromise = API.post("/api/v1/auth/refresh-token")
+      .then((response) => {
+        refreshPromise = null;
+        return response;
+      })
+      .catch((error) => {
+        refreshPromise = null;
+        throw error;
+      });
   }
   return refreshPromise;
 };
@@ -28,22 +48,30 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config || {};
     const url = originalRequest?.url || "";
+    const isRefreshRequest = url.includes("/auth/refresh-token");
 
-    if (error.response?.status === 401 && !originalRequest?._retry && !url.includes("/auth/refresh-token")) {
+    if (error.response?.status === 401 && !originalRequest?._retry && !isRefreshRequest) {
       originalRequest._retry = true;
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          await handleRefresh();
-        } finally {
-          isRefreshing = false;
+
+      try {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            await handleRefresh();
+          } finally {
+            isRefreshing = false;
+          }
+        } else if (refreshPromise) {
+          await refreshPromise;
         }
-      } else if (refreshPromise) {
-        await refreshPromise;
+        return API(originalRequest);
+      } catch {
+        notifyAuthFailure();
       }
-      return API(originalRequest);
+    } else if (error.response?.status === 401 && isRefreshRequest) {
+      notifyAuthFailure();
     }
 
     return Promise.reject(error);

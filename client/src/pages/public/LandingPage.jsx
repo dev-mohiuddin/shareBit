@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useGetAssetsQuery, useGetProfitSummaryQuery } from "@/features/api/apiSlice";
 import { LandingHeader } from "@/components/sections/public/LandingHeader";
 import { HeroSection } from "@/components/sections/public/HeroSection";
@@ -12,6 +12,7 @@ import { TestimonialsSection } from "@/components/sections/public/TestimonialsSe
 import { FaqSection } from "@/components/sections/public/FaqSection";
 import { ContactCtaSection } from "@/components/sections/public/ContactCtaSection";
 import { LandingFooter } from "@/components/sections/public/LandingFooter";
+import { useTheme } from "@/context/ThemeProvider";
 
 const formatCurrency = (value) => {
   const number = Number(value) || 0;
@@ -21,29 +22,14 @@ const formatCurrency = (value) => {
 export const LandingPage = () => {
   const { data: assetsResponse } = useGetAssetsQuery();
   const { data: profitResponse } = useGetProfitSummaryQuery();
+  const { isDark, toggleTheme } = useTheme();
 
-  const [isDark, setIsDark] = useState(() =>
-    typeof window !== "undefined"
-      ? document.documentElement.classList.contains("dark")
-      : false
-  );
   const [shares, setShares] = useState(5);
   const [pricePerShare, setPricePerShare] = useState(250);
   const [roiRate, setRoiRate] = useState(14);
 
   const assets = assetsResponse?.data || [];
   const totalDistributed = profitResponse?.data?.totalDistributed || 0;
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  }, [isDark]);
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme === "dark") setIsDark(true);
-    if (storedTheme === "light") setIsDark(false);
-  }, []);
 
   const projectedReturn = useMemo(() => {
     const investment = shares * pricePerShare;
@@ -74,7 +60,7 @@ export const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <LandingHeader isDark={isDark} onToggleTheme={() => setIsDark((value) => !value)} />
+      <LandingHeader isDark={isDark} onToggleTheme={toggleTheme} />
       <main>
         <HeroSection metrics={metrics} />
         <ValuePillarsSection />

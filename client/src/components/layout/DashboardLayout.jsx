@@ -1,7 +1,9 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  ArrowDownLeft,
   ArrowLeftRight,
   CreditCard,
+  EllipsisVertical,
   LayoutDashboard,
   LogOut,
   PieChart,
@@ -10,20 +12,42 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logout } from "@/features/auth/authSlice";
+import ROUTES from "@/router/routes";
 
-const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/marketplace", label: "Marketplace", icon: PieChart },
-  { path: "/investments", label: "Investments", icon: CreditCard },
-  { path: "/wallet", label: "Wallet", icon: Wallet },
-  { path: "/withdrawals", label: "Withdrawals", icon: ArrowLeftRight },
-  { path: "/profile", label: "Profile", icon: User },
+const desktopNavItems = [
+  { path: ROUTES.DASHBOARD, label: "Dashboard", icon: LayoutDashboard },
+  { path: ROUTES.MARKETPLACE, label: "Marketplace", icon: PieChart },
+  { path: ROUTES.INVESTMENTS, label: "Investments", icon: CreditCard },
+  { path: ROUTES.WALLET, label: "Wallet", icon: Wallet },
+  { path: ROUTES.WITHDRAWALS, label: "Withdrawals", icon: ArrowLeftRight },
+  { path: ROUTES.DEPOSITS, label: "Deposits", icon: ArrowDownLeft },
+  { path: ROUTES.PROFILE, label: "Profile", icon: User },
+];
+
+const mobileBottomNavItems = desktopNavItems.filter((item) =>
+  [ROUTES.DASHBOARD, ROUTES.MARKETPLACE, ROUTES.INVESTMENTS, ROUTES.WALLET, ROUTES.PROFILE].includes(
+    item.path
+  )
+);
+
+const mobileMoreNavItems = [
+  { path: ROUTES.WITHDRAWALS, label: "Withdrawals", icon: ArrowLeftRight },
+  { path: ROUTES.DEPOSITS, label: "Deposits", icon: ArrowDownLeft },
+  { path: ROUTES.PROFILE, label: "Profile", icon: User },
 ];
 
 const getCurrentPageTitle = (pathname) => {
-  const current = navItems.find((item) => pathname.startsWith(item.path));
+  const current = desktopNavItems.find((item) => pathname.startsWith(item.path));
   return current?.label || "Workspace";
 };
 
@@ -38,7 +62,7 @@ export const DashboardLayout = () => {
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate("/login", { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   return (
@@ -50,10 +74,34 @@ export const DashboardLayout = () => {
             <p className="text-lg font-semibold">ShareBit</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="hidden sm:inline-flex">
+            <Badge variant="secondary" className="hidden lg:inline-flex">
               {investorName}
             </Badge>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="lg:hidden" aria-label="Open more menu">
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuLabel>More</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {mobileMoreNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.path} asChild>
+                      <NavLink to={item.path} className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="outline" size="sm" onClick={handleLogout} className="hidden lg:inline-flex">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
@@ -67,7 +115,7 @@ export const DashboardLayout = () => {
             Navigation
           </p>
           <nav className="space-y-1">
-            {navItems.map((item) => {
+            {desktopNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
@@ -99,8 +147,8 @@ export const DashboardLayout = () => {
       </div>
 
       <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 px-2 py-2 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-6 gap-1">
-          {navItems.map((item) => {
+        <div className="grid grid-cols-5 gap-1">
+          {mobileBottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname.startsWith(item.path);
             return (

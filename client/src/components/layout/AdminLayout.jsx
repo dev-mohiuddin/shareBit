@@ -66,6 +66,7 @@ const navItems = [
     children: [
       { label: "Share Payments", to: "/admin/payments" },
       { label: "Withdrawals", to: "/admin/withdrawals" },
+      { label: "Deposits", to: "/admin/deposits" },
       { label: "Profit & Loss", to: "/admin/profit" },
     ]
   },
